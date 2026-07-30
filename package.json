@@ -1,0 +1,14 @@
+{
+  "name": "hospital-queue-system",
+  "version": "1.0.0",
+  "description": "Full-stack Hospital EHR Queue Simulator with Backend Design Patterns",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node js/test.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  }
+}

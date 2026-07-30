@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BIOCARE // Professional EHR Design Patterns System</title>
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/styles.css?v=6">
+    
+    <!-- Highlight.js for Code Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/tokyo-night-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/javascript.min.js"></script>
+</head>
+<body>
+
+    <!-- Main SaaS Container -->
+    <div class="saas-container">
+        
+        <!-- Left Sidebar Navigation -->
+        <aside class="saas-sidebar flex-col">
+            <div class="sidebar-brand">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="brand-icon"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                <h2>BIOCARE EHR</h2>
+            </div>
+            
+            <nav class="sidebar-nav flex-col">
+                <a href="#" class="nav-item active" data-tab-target="triage" id="nav-item-triage">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                    <span>Triage Entrance</span>
+                    <span class="nav-step">Step 1</span>
+                </a>
+                <a href="#" class="nav-item" data-tab-target="queue" id="nav-item-queue">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4M21 12a9 9 0 1 1-9-9"/></svg>
+                    <span>Queue Monitor</span>
+                    <span class="nav-step">Step 2</span>
+                </a>
+                <a href="#" class="nav-item" data-tab-target="doctors" id="nav-item-doctors">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    <span>Doctor Consoles</span>
+                    <span class="nav-step">Step 3 & 4</span>
+                </a>
+                <a href="#" class="nav-item" data-tab-target="wards" id="nav-item-wards">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4M3 10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2M3 10v6a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-6"/></svg>
+                    <span>Wards Map</span>
+                    <span class="nav-step">Step 5</span>
+                </a>
+                <a href="#" class="nav-item" data-tab-target="billing" id="nav-item-billing">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                    <span>Billing Ledger</span>
+                    <span class="nav-step">Step 6</span>
+                </a>
+            </nav>
+            
+            <!-- Sidebar Stats Panel -->
+            <div class="sidebar-vitals">
+                <div class="sidebar-vitals-header">FACILITY SUMMARY</div>
+                <div class="vitals-stats flex-col">
+                    <div class="stat-row">
+                        <span>Waiting patients:</span>
+                        <strong id="sidebar-queue-count" class="text-blue">0</strong>
+                    </div>
+                    <div class="stat-row">
+                        <span>Bed occupancy:</span>
+                        <strong id="sidebar-bed-occupancy" class="text-gold">0%</strong>
+                    </div>
+                    <div class="stat-row">
+                        <span>Critical cases:</span>
+                        <strong id="sidebar-critical-count" class="text-red">0</strong>
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- Right Pane: Main Workspace Area -->
+        <div class="saas-workspace flex-col">
+            
+            <!-- Workspace Top Header -->
+            <header class="workspace-header">
+                <div class="header-title-area">
+                    <h1 id="workspace-active-title">PATIENT TRIAGE ENTRANCE</h1>
+                    <p id="workspace-active-subtitle" class="text-muted">Register and classify patients using the Factory Method pattern.</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-saas" id="btn-toggle-inspector" style="font-weight: 700;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+                        <span>Design View: OFF</span>
+                    </button>
+                    <button class="btn-saas" id="btn-load-samples">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                        Mock Patients
+                    </button>
+                    <button class="btn-saas btn-danger" id="btn-reset">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+                        Clear System
+                    </button>
+                </div>
+            </header>
+
+            <!-- Guided Walkthrough Banner -->
+            <section class="tutorial-banner">
+                <div class="tutorial-card">
+                    <div class="tutorial-stepper">
+                        <span class="step-dot active" id="dot-step-1" onclick="jumpToTutorialStep(1)">1</span>
+                        <span class="step-line"></span>
+                        <span class="step-dot" id="dot-step-2" onclick="jumpToTutorialStep(2)">2</span>
+                        <span class="step-line"></span>
+                        <span class="step-dot" id="dot-step-3" onclick="jumpToTutorialStep(3)">3</span>
+                        <span class="step-line"></span>
+                        <span class="step-dot" id="dot-step-4" onclick="jumpToTutorialStep(4)">4</span>
+                        <span class="step-line"></span>
+                        <span class="step-dot" id="dot-step-5" onclick="jumpToTutorialStep(5)">5</span>
+                        <span class="step-line"></span>
+                        <span class="step-dot" id="dot-step-6" onclick="jumpToTutorialStep(6)">6</span>
+                    </div>
+                    <div class="tutorial-body">
+                        <div class="tutorial-body-header">
+                            <span class="tutorial-badge" id="tutorial-step-header">STEP 1 of 6</span>
+                            <strong id="tutorial-title-text" class="text-primary">Patient Registration</strong>
+                        </div>
+                        <p id="tutorial-body-text" class="text-secondary">
+                            Use the form below to triage a patient. This invokes the Factory Method Pattern to instantiate patient subclasses.
+                        </p>
+                    </div>
+                    <div class="tutorial-actions">
+                        <button class="btn-tutorial-run" id="btn-tutorial-run">⚡ AUTO-RUN STEP 1</button>
+                        <div class="tutorial-nav-group">
+                            <button class="btn-tutorial-nav" id="btn-tutorial-prev" disabled>◀ PREV</button>
+                            <button class="btn-tutorial-nav" id="btn-tutorial-next">NEXT ▶</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Main Split Workspace Layout -->
+            <div class="workspace-main-split" id="workspace-split-container">
+                
+                <!-- Left Pane: Tabbed Views -->
+                <div class="workspace-tab-view flex-col">
+                    
+                    <!-- TAB 1: TRIAGE DESK -->
+                    <div class="tab-panel active" id="panel-triage">
+                        <div class="form-container">
+                            <form id="triage-form" onsubmit="return false;" class="flex-col gap-sm">
+                                <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                                    <div class="form-group">
+                                        <label>PATIENT NAME</label>
+                                        <input type="text" id="patient-name" required placeholder="e.g. Divitha G">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>AGE</label>
+                                        <input type="number" id="patient-age" required min="1" max="120" placeholder="20">
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>SELECT PRESENTING SYMPTOMS (CHOOSE MULTIPLE)</label>
+                                    <div class="symptoms-search-container" style="position: relative;">
+                                        <input type="text" id="symptoms-search-input" placeholder="Type to search symptoms (e.g. chest, fever, wound, cough)..." autocomplete="off" style="width: 100%;">
+                                        <div class="symptoms-dropdown-list" id="symptoms-dropdown-list">
+                                            <!-- Dynamically injected -->
+                                        </div>
+                                    </div>
+                                    <div class="selected-symptoms-tags" id="selected-symptoms-tags">
+                                        <div class="no-symptoms-placeholder">No symptoms selected. Type above or click to select from the list.</div>
+                                    </div>
+                                </div>
+
+                                <!-- Dynamic ESI Recommendation HUD -->
+                                <div class="triage-recommendation-hud" id="triage-recommendation-hud" style="display: none;">
+                                    <div class="rec-header">CLINICAL TRIAGE DECISION (CDSS RECOMMENDATION)</div>
+                                    <div class="rec-grid">
+                                        <div class="rec-box">
+                                            <span class="rec-lbl">Triage Category</span>
+                                            <span class="rec-val-category" id="rec-val-category">-</span>
+                                        </div>
+                                        <div class="rec-box">
+                                            <span class="rec-lbl">Calculated Severity</span>
+                                            <span class="rec-val-severity" id="rec-val-severity">-</span>
+                                        </div>
+                                    </div>
+                                    <div class="rec-footer" id="rec-val-desc">Select symptoms to initiate clinical decision support.</div>
+                                </div>
+
+                                <button class="btn-saas-primary" type="button" id="btn-register-patient">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                                    Initialize Patient Triage
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: PATIENT QUEUE -->
+                    <div class="tab-panel" id="panel-queue">
+                        <div class="table-container flex-col">
+                            <div class="queue-grid-header">
+                                <div>ORDER</div>
+                                <div>PATIENT PROFILE</div>
+                                <div>TRIAGE TYPE</div>
+                                <div>SEVERITY</div>
+                                <div>STATUS</div>
+                                <div>ACTIONS</div>
+                            </div>
+                            <div class="patient-list" id="queue-display-list">
+                                <div class="empty-queue">No active patients registered. Populate mock data or register a patient.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: DOCTOR CONSOLES -->
+                    <div class="tab-panel" id="panel-doctors">
+                        <div class="doctor-dashboard" id="doctors-dashboard-container">
+                            <!-- Injected dynamically by app.js -->
+                        </div>
+                    </div>
+
+                    <!-- TAB 4: WARDS MAP -->
+                    <div class="tab-panel" id="panel-wards">
+                        <div class="hud-facade-layout" style="grid-template-columns: 1fr;">
+                            <div class="beds-visual-map" style="padding: 1.25rem;">
+                                <div class="bed-section-header" style="margin-bottom: 0.5rem; font-size: 0.72rem;">ICU / TRAUMA SHIELD (3 beds)</div>
+                                <div class="ward-bed-row" id="icu-beds-row" style="margin-bottom: 1.25rem;"></div>
+                                
+                                <div class="bed-section-header" style="margin-bottom: 0.5rem; font-size: 0.72rem;">PRIVATE SUITES (2 beds)</div>
+                                <div class="ward-bed-row" id="private-beds-row" style="margin-bottom: 1.25rem;"></div>
+
+                                <div class="bed-section-header" style="margin-bottom: 0.5rem; font-size: 0.72rem;">GENERAL WARD COMPLEX (5 beds)</div>
+                                <div class="ward-bed-row" id="general-beds-row"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 5: BILLING LEDGER -->
+                    <div class="tab-panel" id="panel-billing">
+                        <div class="hud-facade-layout">
+                            <div class="beds-visual-map" style="padding: 1.25rem;">
+                                <div class="bed-section-header" style="margin-bottom: 0.5rem; font-size: 0.72rem;">ADMITTED PATIENTS (IN-PATIENT BILLING)</div>
+                                <div class="admitted-scroll" id="admitted-display-list" style="max-height: 250px; overflow-y: auto;">
+                                    <div class="empty-queue">No patients currently admitted to wards.</div>
+                                </div>
+                            </div>
+                            <div class="admitted-listing" style="padding: 1.25rem;">
+                                <div class="admitted-header" style="font-size: 0.72rem;">RECEIPT GENERATOR</div>
+                                <div id="billing-ledger-receipt-area" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px dashed rgba(255,255,255,0.06); border-radius: 8px; padding: 1rem; text-align: center;">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted" style="margin-bottom: 0.5rem;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                                    <span class="text-muted" style="font-style: italic; font-size: 0.78rem;">Click 'Checkout' on an admitted patient to open the billing summary.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right Pane: Synchronized Pattern Inspector -->
+                <aside class="workspace-inspector flex-col">
+                    
+                    <div class="inspector-panel flex-col">
+                        <div class="inspector-header">
+                            <div class="inspector-title-area">
+                                <h3>DESIGN PATTERN INSPECTOR</h3>
+                                <p class="text-muted">Automated code and UML traces synced to your view.</p>
+                            </div>
+                            <span class="active-pattern-display" id="active-pattern-label">FACTORY</span>
+                        </div>
+                        
+                        <!-- Internal Pattern Selection Tabs -->
+                        <div class="pattern-tabs">
+                            <button class="tab-btn active" data-tab="factory">FACTORY</button>
+                            <button class="tab-btn" data-tab="singleton">SINGLETON</button>
+                            <button class="tab-btn" data-tab="observer">OBSERVER</button>
+                            <button class="tab-btn" data-tab="state">STATE</button>
+                            <button class="tab-btn" data-tab="facade">FACADE</button>
+                            <button class="tab-btn" data-tab="chain">CHAIN</button>
+                        </div>
+                        
+                        <div class="inspector-body flex-col">
+                            
+                            <!-- Visual UML Schema -->
+                            <div class="diagram-container">
+                                <div class="diagram-title">ARCHITECTURAL CLASS ROLES</div>
+                                <div id="uml-diagram-content"></div>
+                            </div>
+                            
+                            <!-- Explanatory Text -->
+                            <div class="pattern-info-card" id="pattern-desc-card">
+                                <h4 id="pattern-detail-title">Factory Method</h4>
+                                <p id="pattern-detail-text" class="text-secondary">Loading...</p>
+                            </div>
+
+                            <!-- Integrated Codebox -->
+                            <div class="code-viewer-container flex-col">
+                                <div class="code-header">
+                                    <span class="code-title" id="code-filepath">factory.js</span>
+                                    <button class="btn-copy-code" id="btn-copy-code">Copy Class Code</button>
+                                </div>
+                                <pre><code class="language-javascript" id="code-block-content"></code></pre>
+                            </div>
+
+                        </div>
+
+                        <!-- Live Logging Trace Console -->
+                        <div class="console-container">
+                            <div class="console-header">
+                                <span>SYSTEM TELEMETRY TRACER</span>
+                                <button id="btn-clear-logs" class="btn-clear">Clear logs</button>
+                            </div>
+                            <div class="console-body" id="console-logs-body">
+                                <div class="console-line"><span class="timestamp">[09:50:00]</span> <span class="tag singleton" style="background:rgba(59,130,246,0.1); color:#3b82f6;">SYSTEM</span> EHR platform active. Select Triage to begin.</div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </aside>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Patient Action / Heart ECG Monitor Modal -->
+    <div class="modal-overlay" id="patient-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-patient-name">PATIENT CONSULT PANEL</h3>
+                <button class="close-modal" id="btn-close-modal">&times;</button>
+            </div>
+            
+            <div class="modal-body-grid">
+                
+                <!-- Left panel: Canvas ECG line -->
+                <div class="modal-vitals-column flex-col">
+                    <div class="ecg-vitals-header">
+                        <div class="vital-block">
+                            <span class="vital-label">HEART RATE</span>
+                            <strong class="neon-text-green pulse-text"><span id="modal-vital-hr">80</span> BPM</strong>
+                        </div>
+                        <div class="vital-block">
+                            <span class="vital-label">SPO2 VALUE</span>
+                            <strong class="neon-text-blue"><span id="modal-vital-spo2">98</span>%</strong>
+                        </div>
+                        <div class="vital-block">
+                            <span class="vital-label">BLOOD PRESSURE</span>
+                            <strong class="neon-text-gold"><span id="modal-vital-bp">120/80</span></strong>
+                        </div>
+                    </div>
+                    
+                    <!-- ECG screen -->
+                    <div class="ecg-monitor-frame">
+                        <div class="ecg-monitor-grid"></div>
+                        <canvas id="ecg-canvas" width="420" height="110"></canvas>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Symptom Summary</label>
+                        <div id="modal-patient-symptoms" class="symptoms-readout">None</div>
+                    </div>
+                </div>
+
+                <!-- Right panel: State transitions & options -->
+                <div class="modal-actions-column flex-col">
+                    <div class="form-group">
+                        <label>Lifecycle State</label>
+                        <div id="modal-patient-state" class="state-badge">Waiting</div>
+                    </div>
+
+                    <!-- Injected actions -->
+                    <div class="flex-col" id="modal-actions-area" style="flex:1; justify-content:center;"></div>
+                </div>
+
+            </div>
+
+            <!-- Lifecycle logs -->
+            <div class="form-group">
+                <label>PATIENT LIFECYCLE AUDIT TRAIL</label>
+                <div class="logs-list" id="modal-patient-logs"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/patterns/factory.js?v=6"></script>
+    <script src="js/patterns/singleton.js?v=6"></script>
+    <script src="js/patterns/observer.js?v=6"></script>
+    <script src="js/patterns/state.js?v=6"></script>
+    <script src="js/patterns/facade.js?v=6"></script>
+    <script src="js/patterns/chain.js?v=6"></script>
+    <script src="js/code_snippets.js?v=6"></script>
+    <script src="js/app.js?v=6"></script>
+
+</body>
+</html>

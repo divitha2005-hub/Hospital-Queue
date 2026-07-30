@@ -1,0 +1,1483 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+    --bg-dark: #090d16;
+    --sidebar-bg: #0f172a;
+    --workspace-bg: #111827;
+    --card-bg: #1f2937;
+    --card-bg-hover: #374151;
+    --border-color: #2e3748;
+    
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    
+    --brand-color: #6366f1; /* Indigo */
+    
+    --blue: #3b82f6;
+    --gold: #f59e0b;
+    --red: #ef4444;
+    --green: #10b981;
+    --violet: #a855f7;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Outfit', sans-serif;
+}
+
+body {
+    background-color: var(--workspace-bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+/* Flex Container helpers */
+.flex-col { display: flex; flex-direction: column; }
+.flex-center { display: flex; align-items: center; justify-content: center; }
+.gap-xs { gap: 0.35rem; }
+.gap-sm { gap: 0.85rem; }
+.text-muted { color: var(--text-muted); }
+.text-blue { color: var(--blue); }
+.text-gold { color: var(--gold); }
+.text-red { color: var(--red); }
+.text-green { color: var(--green); }
+
+/* Master layout wrapper */
+.saas-container {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+}
+
+/* Sidebar styling */
+.saas-sidebar {
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border-color);
+    padding: 1.25rem;
+    justify-content: space-between;
+    height: 100%;
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--brand-color);
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.sidebar-brand h2 {
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--text-primary);
+}
+
+.brand-icon {
+    color: var(--brand-color);
+}
+
+/* Navigation items */
+.sidebar-nav {
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    flex: 1;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 0.85rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    gap: 0.75rem;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+}
+
+.nav-item:hover {
+    background: rgba(255,255,255,0.03);
+    color: var(--text-primary);
+}
+
+.nav-item.active {
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--text-primary);
+    border-left-color: var(--brand-color);
+}
+
+.nav-step {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    background: rgba(255,255,255,0.05);
+    color: var(--text-muted);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+}
+
+.nav-item.active .nav-step {
+    background: var(--brand-color);
+    color: #fff;
+}
+
+/* Sidebar Vitals stats */
+.sidebar-vitals {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 8px;
+    padding: 0.85rem;
+    margin-bottom: 1.25rem;
+}
+
+.sidebar-vitals-header {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    margin-bottom: 0.6rem;
+}
+
+.vitals-stats { gap: 0.5rem; }
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-secondary);
+}
+
+.stat-row strong { font-size: 0.82rem; }
+
+.sidebar-footer {
+    border-top: 1px solid rgba(255,255,255,0.04);
+    padding-top: 1rem;
+}
+
+.footer-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
+    letter-spacing: 0.5px;
+}
+
+.student-item {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    line-height: 1rem;
+}
+
+/* Workspace wrapper */
+.saas-workspace {
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Workspace header */
+.workspace-header {
+    background: var(--sidebar-bg);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-title-area h1 {
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: var(--text-primary);
+}
+
+.header-title-area p {
+    font-size: 0.72rem;
+    margin-top: 0.15rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-saas {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 0.45rem 0.9rem;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.2s ease;
+}
+
+.btn-saas:hover {
+    border-color: var(--text-secondary);
+    color: var(--text-primary);
+    background: rgba(255,255,255,0.02);
+}
+
+.btn-saas.btn-danger {
+    color: var(--red);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+.btn-saas.btn-danger:hover {
+    background: rgba(239, 68, 68, 0.05);
+    border-color: var(--red);
+}
+
+/* Guided Tutorial stepper banner */
+.tutorial-banner {
+    padding: 1rem 1.5rem 0 1rem;
+}
+
+.tutorial-card {
+    background: rgba(99, 102, 241, 0.05);
+    border: 1px dashed rgba(99, 102, 241, 0.3);
+    border-radius: 12px;
+    padding: 1rem;
+    display: grid;
+    grid-template-columns: 220px 1fr auto;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.tutorial-stepper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    border-right: 1px solid rgba(255,255,255,0.05);
+    padding-right: 1.25rem;
+}
+
+.step-dot {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.step-dot.active {
+    background: var(--brand-color);
+    border-color: var(--brand-color);
+    color: #fff;
+}
+
+.step-dot.passed {
+    border-color: var(--brand-color);
+    color: var(--brand-color);
+}
+
+.step-line {
+    width: 8px;
+    height: 2px;
+    background: rgba(255,255,255,0.05);
+}
+.step-line.active {
+    background: var(--brand-color);
+}
+
+.tutorial-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.tutorial-body-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.tutorial-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    font-weight: 700;
+    background: rgba(99, 102, 241, 0.12);
+    color: var(--brand-color);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+}
+
+.tutorial-body-header strong {
+    font-size: 0.85rem;
+}
+
+.tutorial-body p {
+    font-size: 0.78rem;
+    line-height: 1.15rem;
+}
+
+.tutorial-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.45rem;
+}
+
+.btn-tutorial-run {
+    background: var(--brand-color);
+    border: none;
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.45rem 0.85rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-tutorial-run:hover {
+    opacity: 0.9;
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+}
+
+.tutorial-nav-group {
+    display: flex;
+    gap: 0.3rem;
+}
+
+.btn-tutorial-nav {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-tutorial-nav:hover:not(:disabled) {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+}
+
+.btn-tutorial-nav:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* Split Workspace layout */
+.workspace-main-split {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr;
+    padding: 1rem;
+    gap: 1rem;
+    overflow: hidden;
+}
+
+.workspace-main-split.show-inspector {
+    grid-template-columns: 1fr 380px;
+}
+
+/* Tabbed views on left */
+.workspace-tab-view {
+    overflow-y: auto;
+    height: 100%;
+}
+
+.tab-panel {
+    display: none;
+    height: 100%;
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+/* Form Container Step 1 */
+.form-container {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 1rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+input, select, textarea {
+    background: #111827;
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 0.55rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    transition: all 0.2s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--brand-color);
+}
+
+.btn-saas-primary {
+    background: var(--brand-color);
+    border: none;
+    color: #fff;
+    font-weight: 700;
+    padding: 0.65rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.btn-saas-primary:hover {
+    opacity: 0.9;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+}
+
+/* Queue monitor step 2 table */
+.table-container {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0.75rem;
+    height: 100%;
+}
+
+.queue-grid-header {
+    display: grid;
+    grid-template-columns: 80px 1.4fr 1fr 100px 90px 110px;
+    padding: 0.5rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.patient-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    overflow-y: auto;
+    flex: 1;
+    padding: 0.5rem 0;
+}
+
+.queue-patient-row {
+    display: grid;
+    grid-template-columns: 80px 1.4fr 1fr 100px 90px 110px;
+    align-items: center;
+    padding: 0.55rem 0.5rem;
+    background: rgba(255,255,255,0.01);
+    border: 1px solid rgba(255,255,255,0.02);
+    border-radius: 8px;
+    font-size: 0.82rem;
+    transition: all 0.2s ease;
+}
+
+.queue-patient-row:hover {
+    background: rgba(255,255,255,0.025);
+}
+
+.queue-patient-row.emergency-row { border-left: 3px solid var(--red); }
+.queue-patient-row.opd-row { border-left: 3px solid var(--gold); }
+.queue-patient-row.followup-row { border-left: 3px solid var(--blue); }
+
+.token-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+.emergency-row .token-number { color: var(--red); }
+.opd-row .token-number { color: var(--gold); }
+.followup-row .token-number { color: var(--blue); }
+
+.patient-profile-cell h5 {
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+.patient-profile-cell span {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.badge-type-hud {
+    display: inline-block;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.badge-type-hud.emergency { background: rgba(239, 68, 68, 0.1); color: var(--red); }
+.badge-type-hud.opd { background: rgba(245, 158, 11, 0.1); color: var(--gold); }
+.badge-type-hud.followup { background: rgba(59, 130, 246, 0.1); color: var(--blue); }
+
+.severity-pill-hud {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255,255,255,0.03);
+    padding: 0.1rem 0.45rem;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-align: center;
+    width: max-content;
+}
+.severity-pill-hud.high { color: var(--red); border-color: rgba(239,68,68,0.2); }
+.severity-pill-hud.medium { color: var(--gold); border-color: rgba(245,158,11,0.2); }
+.severity-pill-hud.low { color: var(--blue); border-color: rgba(59,130,246,0.2); }
+
+.status-badge-inline {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.empty-queue {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 0.85rem;
+}
+
+/* Doctor terminals step 3 */
+.doctor-dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1rem;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+    max-height: calc(100vh - 220px);
+}
+
+.doctor-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 105px;
+}
+
+.doc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.doc-header h4 {
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.doc-specialty {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    display: block;
+}
+
+.status-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+}
+.status-badge.available { background: rgba(16, 185, 129, 0.1); color: var(--green); border: 1px solid rgba(16,185,129,0.2); }
+.status-badge.busy { background: rgba(239, 68, 68, 0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
+
+.doc-work-area {
+    margin-top: 0.5rem;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    width: 100%;
+}
+
+.empty-console {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Facade Wards Step 5 */
+.hud-facade-layout {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 1rem;
+    height: 100%;
+}
+
+.beds-visual-map {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0.75rem;
+}
+
+.bed-section-header {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-bottom: 0.3rem;
+}
+
+.ward-bed-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.75rem;
+}
+
+.hud-bed-block {
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    border: 1px solid transparent;
+}
+.hud-bed-block.available {
+    background: rgba(16, 185, 129, 0.05);
+    border-color: rgba(16, 185, 129, 0.2);
+    color: var(--green);
+}
+.hud-bed-block.occupied {
+    background: rgba(239, 68, 68, 0.05);
+    border-color: rgba(239, 68, 68, 0.25);
+    color: var(--red);
+}
+
+.admitted-listing {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.admitted-header {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.admitted-scroll {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+/* Right-pane Pattern Inspector */
+.workspace-inspector {
+    height: 100%;
+    overflow: hidden;
+    display: none;
+}
+
+.workspace-main-split.show-inspector .workspace-inspector {
+    display: flex;
+}
+
+.inspector-panel {
+    background: var(--sidebar-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    height: 100%;
+}
+
+.inspector-header {
+    background: rgba(255,255,255,0.01);
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.inspector-title-area h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.inspector-title-area p {
+    font-size: 0.65rem;
+}
+
+.active-pattern-display {
+    background: rgba(99, 102, 241, 0.05);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    color: var(--brand-color);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+}
+
+.pattern-tabs {
+    display: flex;
+    background: rgba(0,0,0,0.2);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tab-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    padding: 0.55rem 0.2rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    font-weight: 700;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.tab-btn:hover { color: var(--text-secondary); }
+.tab-btn.active {
+    color: var(--brand-color);
+    border-bottom-color: var(--brand-color);
+    background: rgba(99, 102, 241, 0.03);
+}
+
+.inspector-body {
+    padding: 0.75rem;
+    gap: 0.75rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Diagram */
+.diagram-container {
+    background: rgba(0,0,0,0.15);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.65rem;
+}
+
+.diagram-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    margin-bottom: 0.45rem;
+}
+
+.uml-box {
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.01);
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    min-width: 90px;
+    text-align: center;
+    padding: 0.25rem;
+}
+
+.uml-box.highlighted {
+    border-color: var(--brand-color);
+    background: rgba(99, 102, 241, 0.06);
+}
+
+.uml-title {
+    font-weight: 700;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding-bottom: 0.1rem;
+    margin-bottom: 0.1rem;
+}
+
+.uml-field {
+    text-align: left;
+    color: var(--text-muted);
+    font-size: 0.58rem;
+}
+
+.uml-arrow {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+}
+
+.pattern-info-card {
+    background: rgba(255, 255, 255, 0.01);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    padding: 0.75rem;
+}
+
+.pattern-info-card h4 {
+    font-size: 0.8rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 0.25rem;
+}
+
+.pattern-info-card p {
+    font-size: 0.75rem;
+    line-height: 1.1rem;
+}
+
+/* Code Viewer Frame */
+.code-viewer-container {
+    background: #0b0f19;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.code-header {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.3rem 0.6rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.code-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+}
+
+.btn-copy-code {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    padding: 0.15rem 0.4rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.btn-copy-code:hover {
+    color: var(--brand-color);
+    border-color: var(--brand-color);
+}
+
+pre { padding: 0.5rem; margin: 0; }
+code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    line-height: 0.95rem;
+}
+
+/* Logging Trace console */
+.console-container {
+    background: #05070c;
+    border-top: 1px solid var(--border-color);
+    height: 110px;
+    display: flex;
+    flex-direction: column;
+}
+
+.console-header {
+    background: rgba(0, 0, 0, 0.25);
+    padding: 0.35rem 0.6rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.btn-clear {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+}
+.btn-clear:hover { color: var(--text-secondary); }
+
+.console-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.4rem 0.6rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.console-line { line-height: 0.85rem; }
+.console-line .timestamp { color: var(--text-muted); margin-right: 0.35rem; }
+.console-line .tag {
+    font-weight: 700;
+    margin-right: 0.35rem;
+    padding: 0.05rem 0.15rem;
+    border-radius: 2px;
+    font-size: 0.58rem;
+}
+.console-line .tag.factory { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+.console-line .tag.singleton { background: rgba(59, 130, 246, 0.15); color: var(--blue); }
+.console-line .tag.observer { background: rgba(16, 185, 129, 0.15); color: var(--green); }
+.console-line .tag.state { background: rgba(251, 191, 36, 0.15); color: var(--gold); }
+.console-line .tag.facade { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+.console-line .tag.chain { background: rgba(59, 130, 246, 0.15); color: var(--blue); }
+
+/* Vitals Heart Monitor Modal Layout */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(2, 4, 8, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.modal-content {
+    background: #0f172a;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 760px;
+    padding: 1.25rem;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    transform: scale(0.97);
+    transition: transform 0.2s ease;
+}
+
+.modal-overlay.active .modal-content {
+    transform: scale(1);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.4rem;
+}
+
+.modal-header h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--brand-color);
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.25rem;
+    cursor: pointer;
+}
+.close-modal:hover { color: var(--red); }
+
+.modal-body-grid {
+    display: grid;
+    grid-template-columns: 1.25fr 0.75fr;
+    gap: 1.25rem;
+}
+
+.modal-vitals-column { gap: 0.5rem; }
+
+.ecg-vitals-header {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.4rem;
+    background: rgba(0,0,0,0.25);
+    padding: 0.5rem;
+    border-radius: 6px;
+}
+
+.vital-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.vital-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--text-muted);
+}
+
+.vital-block strong { font-size: 0.85rem; }
+
+/* ECG monitor Oscilloscope screen */
+.ecg-monitor-frame {
+    background: #020402;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 6px;
+    height: 110px;
+    position: relative;
+    overflow: hidden;
+}
+
+.ecg-monitor-grid {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        linear-gradient(rgba(16, 185, 129, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(16, 185, 129, 0.03) 1px, transparent 1px);
+    background-size: 10px 10px;
+    pointer-events: none;
+}
+
+#ecg-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.symptoms-readout {
+    background: rgba(0,0,0,0.2);
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.modal-actions-column { gap: 0.5rem; }
+
+.state-badge {
+    background: rgba(99, 102, 241, 0.05);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    color: var(--brand-color);
+    padding: 0.4rem;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.logs-list {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.03);
+    border-radius: 6px;
+    padding: 0.4rem;
+    max-height: 80px;
+    overflow-y: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.log-item { color: var(--text-muted); }
+
+/* Visual highlight on active components */
+.tutorial-highlight {
+    border-color: var(--brand-color) !important;
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.15) !important;
+}
+
+.pulse-highlight {
+    animation: tabPulse 1s ease;
+}
+
+@keyframes tabPulse {
+    0% { background: rgba(99, 102, 241, 0); }
+    50% { background: rgba(99, 102, 241, 0.15); }
+    100% { background: rgba(99, 102, 241, 0); }
+}
+
+/* Thermal invoice ticket styling */
+.thermal-receipt {
+    background: #fdfdfd;
+    color: #111;
+    border-radius: 4px;
+    padding: 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    line-height: 0.85rem;
+    border-left: 2px dashed #bbb;
+    border-right: 2px dashed #bbb;
+    position: relative;
+}
+
+.barcode-css {
+    display: flex;
+    justify-content: center;
+    height: 25px;
+    gap: 1px;
+    margin: 0.4rem 0;
+}
+.barcode-css span { background: #111; width: 2px; }
+.barcode-css span.wide { width: 4px; }
+.barcode-css span.spacer { background: transparent; width: 2px; }
+
+.stamp-paid {
+    border: 2px solid #ff3366;
+    color: #ff3366;
+    font-size: 0.7rem;
+    font-weight: 900;
+    padding: 0.1rem 0.3rem;
+    text-transform: uppercase;
+    transform: rotate(-10deg);
+    display: inline-block;
+    margin-left: 1rem;
+    border-radius: 4px;
+}
+
+/* Realistic Clinical Bed Cards */
+.clinical-bed-card {
+    background: rgba(30, 41, 59, 0.45);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    position: relative;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+.clinical-bed-card.occupied {
+    border-color: rgba(239, 68, 68, 0.35);
+    background: rgba(239, 68, 68, 0.04);
+    cursor: pointer;
+}
+.clinical-bed-card.occupied:hover {
+    border-color: var(--red);
+    background: rgba(239, 68, 68, 0.08);
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.15);
+    transform: translateY(-2px);
+}
+.clinical-bed-card.vacant {
+    border-color: rgba(16, 185, 129, 0.25);
+    background: rgba(16, 185, 129, 0.015);
+}
+.clinical-bed-card.vacant:hover {
+    border-color: rgba(16, 185, 129, 0.45);
+    background: rgba(16, 185, 129, 0.035);
+}
+.bed-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.bed-code {
+    font-weight: 800;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+.clinical-bed-card.occupied .bed-code {
+    color: #f87171;
+}
+.clinical-bed-card.vacant .bed-code {
+    color: #34d399;
+}
+.bed-status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+}
+.bed-status-dot.occupied {
+    background: var(--red);
+    box-shadow: 0 0 6px var(--red);
+    animation: pulseGlow 1.5s infinite;
+}
+.bed-status-dot.vacant {
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+}
+.clinical-bed-card .patient-name {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.clinical-bed-card .doctor-badge {
+    font-size: 0.62rem;
+    color: var(--text-muted);
+}
+.micro-vitals-pulse {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.58rem;
+    color: var(--gold);
+    margin-top: 0.25rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    padding-top: 0.25rem;
+}
+.blink {
+    animation: blinkText 1.2s infinite;
+}
+@keyframes pulseGlow {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.4); opacity: 0.4; }
+    100% { transform: scale(1); opacity: 1; }
+}
+@keyframes blinkText {
+    0% { opacity: 1; }
+    50% { opacity: 0.35; }
+    100% { opacity: 1; }
+}
+
+/* Symptoms Searchable Dropdown & Tag List */
+.symptoms-dropdown-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    max-height: 190px;
+    overflow-y: auto;
+    background: #1e293b;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-top: 0.25rem;
+    z-index: 1000;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    display: none; /* Injected by JS toggle */
+}
+.symptom-item {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background 0.15s ease;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.symptom-item:hover {
+    background: rgba(99, 102, 241, 0.12);
+    color: var(--text-primary);
+}
+.symptom-item-severity {
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 0.05rem 0.3rem;
+    border-radius: 4px;
+}
+.symptom-item-severity.emergency { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.symptom-item-severity.opd { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+.symptom-item-severity.followup { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+
+.selected-symptoms-tags {
+    margin-top: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding: 0.5rem;
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    min-height: 42px;
+    align-items: center;
+}
+.no-symptoms-placeholder {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-style: italic;
+    padding-left: 0.25rem;
+}
+.symptom-tag {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.5rem;
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    border-radius: 4px;
+    font-size: 0.68rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-primary);
+}
+.symptom-tag-remove {
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--text-muted);
+    transition: color 0.15s ease;
+}
+.symptom-tag-remove:hover {
+    color: #ef4444;
+}
+
+/* Dynamic CDSS Recommendation HUD */
+.triage-recommendation-hud {
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.6rem 0.8rem;
+    margin-top: 0.4rem;
+}
+.rec-header {
+    font-size: 0.6rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    margin-bottom: 0.4rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    padding-bottom: 0.25rem;
+}
+.rec-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+.rec-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+.rec-lbl {
+    font-size: 0.58rem;
+    color: var(--text-muted);
+}
+.rec-val-category {
+    font-size: 0.82rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+}
+.rec-val-severity {
+    font-size: 0.82rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--gold);
+}
+.rec-footer {
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    margin-top: 0.35rem;
+    font-style: italic;
+}
+
+/* Modal Action Button Styles */
+.btn-hud-primary {
+    background: var(--brand-color);
+    border: 1px solid var(--brand-color);
+    color: #ffffff !important;
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.25);
+}
+.btn-hud-primary:hover {
+    background: #4f46e5;
+    border-color: #4f46e5;
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.45);
+    transform: translateY(-1px);
+}
+.btn-hud-primary svg {
+    stroke: #ffffff;
+}
+
+.btn-hud {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary) !important;
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.btn-hud:hover {
+    border-color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.btn-hud.btn-neon-red {
+    border-color: rgba(239, 68, 68, 0.45);
+    color: #f87171 !important;
+}
+.btn-hud.btn-neon-red:hover {
+    border-color: var(--red);
+    background: rgba(239, 68, 68, 0.08);
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.15);
+}
