@@ -1,19 +1,19 @@
 /**
  * Automated test script to verify design patterns in the Node.js backend.
  */
-
+require('dotenv').config();
 const { PatientFactory } = require('../server/patterns/factory.js');
 const DatabaseEngine = require('../server/db.js');
 const { WaitingState, ConsultationState, AdmittedState, DischargedState } = require('../server/patterns/state.js');
 const { NurseHandler, JuniorDoctorHandler, SpecialistHandler } = require('../server/patterns/chain.js');
 const AdmissionFacade = require('../server/patterns/facade.js');
 
-function runTests() {
+async function runTests() {
     console.log("=== STARTING AUTOMATED DESIGN PATTERN TESTS ===");
 
     // Initialize Database for testing
     const db = DatabaseEngine.getInstance();
-    db.resetAll();
+    await db.resetAll();
 
     // 1. Singleton Test
     console.log("\n[Singleton Pattern Test]");
@@ -117,10 +117,10 @@ function runTests() {
     const facade = new AdmissionFacade();
     
     // Admit bob
-    const admission = facade.admitPatient(bobInstance, "ICU", 3);
+    const admission = await facade.admitPatient(bobInstance, "ICU", 3);
     
     // Retrieve bob from history in database
-    const dbHistory = db.getHistory();
+    const dbHistory = await db.getHistory();
     const dbBob = dbHistory.find(p => p.id === bobInstance.id);
     
     if (dbBob && dbBob.bedNumber && dbBob.stateName === "Admitted" && dbBob.billingSummary) {
@@ -132,9 +132,9 @@ function runTests() {
 
     // Discharge
     const bobReconstituted = PatientFactory.reconstitute(dbBob);
-    facade.dischargePatient(bobReconstituted);
+    await facade.dischargePatient(bobReconstituted);
     
-    const dbBobDischarged = db.getHistory().find(p => p.id === bobInstance.id);
+    const dbBobDischarged = (await db.getHistory()).find(p => p.id === bobInstance.id);
     if (dbBobDischarged && dbBobDischarged.stateName === "Discharged" && dbBobDischarged.billingSummary.status === "Paid") {
         console.log("✅ Success: AdmissionFacade successfully discharged patient and marked bill as Paid.");
     } else {
@@ -142,7 +142,71 @@ function runTests() {
         process.exit(1);
     }
 
+    // 7. Strategy Pattern Test
+    console.log("\n[Strategy Pattern Test]");
+    const { StrategyFactory } = require('../server/patterns/strategy.js');
+    
+    const baseFee = 100;
+    const bedCharge = 1000;
+    const pharmacyCharge = 500;
+    
+    // Standard Strategy
+    const standardStrategy = StrategyFactory.getStrategy("none");
+    const totalStandard = standardStrategy.calculateTotal(baseFee, bedCharge, pharmacyCharge);
+    if (totalStandard === 1600) {
+        console.log("✅ Success: StandardBillingStrategy calculates correct flat sum ($1600).");
+    } else {
+        console.error(`❌ Failure: StandardBillingStrategy total incorrect: ${totalStandard}`);
+        process.exit(1);
+    }
+    
+    // Government Shield Strategy (70% Bed Disc, 30% RX Disc)
+    // 100 + (1000 * 0.3) + (500 * 0.7) = 100 + 300 + 350 = 750
+    const govtStrategy = StrategyFactory.getStrategy("govt");
+    const totalGovt = govtStrategy.calculateTotal(baseFee, bedCharge, pharmacyCharge);
+    if (totalGovt === 750) {
+        console.log("✅ Success: GovernmentInsuredStrategy calculates correct discounted sum ($750).");
+    } else {
+        console.error(`❌ Failure: GovernmentInsuredStrategy total incorrect: ${totalGovt}`);
+        process.exit(1);
+    }
+    
+    // Premium Private Strategy (50% Consult Disc, 40% Bed Disc)
+    // (100 * 0.5) + (1000 * 0.6) + 500 = 50 + 600 + 500 = 1150
+    const premiumStrategy = StrategyFactory.getStrategy("premium");
+    const totalPremium = premiumStrategy.calculateTotal(baseFee, bedCharge, pharmacyCharge);
+    if (totalPremium === 1150) {
+        console.log("✅ Success: PremiumInsuredStrategy calculates correct discounted sum ($1150).");
+    } else {
+        console.error(`❌ Failure: PremiumInsuredStrategy total incorrect: ${totalPremium}`);
+        process.exit(1);
+    }
+
+    // Corporate Partner Strategy (Flat 15% Disc)
+    // 1600 * 0.85 = 1360
+    const corporateStrategy = StrategyFactory.getStrategy("corporate");
+    const totalCorporate = corporateStrategy.calculateTotal(baseFee, bedCharge, pharmacyCharge);
+    if (totalCorporate === 1360) {
+        console.log("✅ Success: CorporateBillingStrategy calculates correct flat total discount ($1360).");
+    } else {
+        console.error(`❌ Failure: CorporateBillingStrategy total incorrect: ${totalCorporate}`);
+        process.exit(1);
+    }
+
     console.log("\n🎉 ALL DESIGN PATTERN TESTS PASSED SUCCESSFULLY! 🎉\n");
 }
 
-runTests();
+const db = DatabaseEngine.getInstance();
+db.connect(process.env.MONGODB_URI)
+    .then(() => {
+        runTests()
+            .then(() => process.exit(0))
+            .catch(err => {
+                console.error("Error during test run:", err);
+                process.exit(1);
+            });
+    })
+    .catch(err => {
+        console.error("Mongoose test setup failed:", err);
+        process.exit(1);
+    });

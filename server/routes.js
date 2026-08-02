@@ -1,6 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const DatabaseEngine = require("./db");
+const Patient = require("./models/Patient");
+const Bed = require("./models/Bed");
+const Doctor = require("./models/Doctor");
 const { PatientFactory } = require("./patterns/factory");
 const { StateFactory } = require("./patterns/state");
 const { NurseHandler, JuniorDoctorHandler, SpecialistHandler } = require("./patterns/chain");
@@ -63,13 +66,13 @@ router.get("/events", (req, res) => {
 // -------------------------------------------------------------
 
 // Retrieve Queue and History Lists
-router.get("/patients", (req, res) => {
+router.get("/patients", async (req, res) => {
     try {
-        const activePatients = sortQueue(db.getPatients());
-        const historyPatients = db.getHistory();
-        const doctors = db.getDoctors();
-        const beds = db.getBeds();
-        const allocatedBeds = db.getAllocatedBeds();
+        const activePatients = sortQueue(await db.getPatients());
+        const historyPatients = await db.getHistory();
+        const doctors = await db.getDoctors();
+        const beds = await db.getBeds();
+        const allocatedBeds = await db.getAllocatedBeds();
 
         res.json({
             queue: activePatients,
@@ -84,7 +87,7 @@ router.get("/patients", (req, res) => {
 });
 
 // Register and Triage Patient (Factory Method)
-router.post("/patients", (req, res) => {
+router.post("/patients", async (req, res) => {
     try {
         const { name, age, triageType, severityScore, symptoms } = req.body;
         
@@ -99,15 +102,12 @@ router.post("/patients", (req, res) => {
         const patientData = patientInstance.serialize();
 
         // Save active patient
-        const patients = db.getPatients();
-        patients.push(patientData);
-        db.writeRaw({
-            ...db.readRaw(),
-            patients: sortQueue(patients)
-        });
+        await db.savePatient(patientData);
+
+        const activePatients = sortQueue(await db.getPatients());
 
         // Broadcast updates to all connected browser Observers
-        broadcastEvent("queueUpdated", { queue: sortQueue(patients) });
+        broadcastEvent("queueUpdated", { queue: activePatients });
 
         res.status(201).json(patientData);
     } catch (err) {
@@ -120,14 +120,14 @@ router.post("/patients", (req, res) => {
 // -------------------------------------------------------------
 
 // Doctor Calls Patient (State Pattern Validation)
-router.post("/consultations/call", (req, res) => {
+router.post("/consultations/call", async (req, res) => {
     try {
         const { docId } = req.body;
         if (!docId) {
             return res.status(400).json({ error: "Missing doctor ID." });
         }
 
-        const doctorsMap = db.getDoctors();
+        const doctorsMap = await db.getDoctors();
         const doctor = doctorsMap[docId];
         if (!doctor) {
             return res.status(404).json({ error: "Doctor not found." });
@@ -137,7 +137,7 @@ router.post("/consultations/call", (req, res) => {
             return res.status(400).json({ error: "Doctor is currently consulting another patient." });
         }
 
-        const activeQueue = sortQueue(db.getPatients());
+        const activeQueue = sortQueue(await db.getPatients());
         if (activeQueue.length === 0) {
             return res.status(400).json({ error: "No patients currently waiting in triage queue." });
         }
@@ -153,18 +153,16 @@ router.post("/consultations/call", (req, res) => {
         state.next(patient, doctor);
 
         // Update Doctor status
-        db.updateDoctorAvailability(docId, false, patient.id);
+        await db.updateDoctorAvailability(docId, false, patient.id);
         
-        // Update patient list in DB
-        db.writeRaw({
-            ...db.readRaw(),
-            patients: activeQueue
-        });
-        db.saveHistoryPatient(patient.serialize());
+        // Save history patient
+        await db.saveHistoryPatient(patient.serialize());
+
+        const updatedQueue = sortQueue(await db.getPatients());
 
         // Broadcast queue update & doctor consoles refresh
         broadcastEvent("queueUpdated", { 
-            queue: activeQueue, 
+            queue: updatedQueue, 
             doctorCalled: patient.serialize() 
         });
 
@@ -175,20 +173,19 @@ router.post("/consultations/call", (req, res) => {
 });
 
 // Clinical Case Escalation (Chain of Responsibility)
-router.post("/consultations/escalate", (req, res) => {
+router.post("/consultations/escalate", async (req, res) => {
     try {
         const { patientId, issue } = req.body;
         if (!patientId || !issue) {
             return res.status(400).json({ error: "Missing parameters: patientId, issue." });
         }
 
-        const allPatients = [...db.getPatients(), ...db.getHistory()];
-        const patientData = allPatients.find(p => p.id === patientId);
-        if (!patientData) {
+        const patientDoc = await Patient.findOne({ id: patientId });
+        if (!patientDoc) {
             return res.status(404).json({ error: "Patient record not found." });
         }
 
-        const patient = PatientFactory.reconstitute(patientData);
+        const patient = PatientFactory.reconstitute(patientDoc.toObject());
         
         // Setup Escalation Chain
         const nurse = new NurseHandler();
@@ -208,11 +205,7 @@ router.post("/consultations/escalate", (req, res) => {
         }
 
         // Save updates
-        if (db.getPatients().some(p => p.id === patient.id)) {
-            db.savePatient(patient.serialize());
-        } else {
-            db.saveHistoryPatient(patient.serialize());
-        }
+        await db.savePatient(patient.serialize());
 
         broadcastEvent("queueUpdated", { escalated: patient.serialize() });
 
@@ -227,29 +220,28 @@ router.post("/consultations/escalate", (req, res) => {
 // -------------------------------------------------------------
 
 // Admit Patient (AdmissionFacade coordinates Bed, Doctor, Bill subsystems)
-router.post("/admissions/admit", (req, res) => {
+router.post("/admissions/admit", async (req, res) => {
     try {
         const { patientId, bedCategory, durationDays } = req.body;
         if (!patientId || !bedCategory || !durationDays) {
             return res.status(400).json({ error: "Missing parameters: patientId, bedCategory, durationDays." });
         }
 
-        const history = db.getHistory();
-        const patientData = history.find(p => p.id === patientId);
-        if (!patientData) {
+        const patientDoc = await Patient.findOne({ id: patientId });
+        if (!patientDoc) {
             return res.status(404).json({ error: "Patient record not found in system." });
         }
 
-        const patient = PatientFactory.reconstitute(patientData);
+        const patient = PatientFactory.reconstitute(patientDoc.toObject());
         
         // Invoke AdmissionFacade
-        const result = admissionFacade.admitPatient(patient, bedCategory, parseInt(durationDays));
+        const result = await admissionFacade.admitPatient(patient, bedCategory, parseInt(durationDays));
 
         // Free doctor shift that was consulting
-        const doctors = db.getDoctors();
+        const doctors = await db.getDoctors();
         for (let key in doctors) {
             if (doctors[key].patientId === patient.id) {
-                db.updateDoctorAvailability(key, true, null);
+                await db.updateDoctorAvailability(key, true, null);
             }
         }
 
@@ -262,61 +254,65 @@ router.post("/admissions/admit", (req, res) => {
 });
 
 // Process Payment & Discharge (Facade processes bill, releases bed, frees doctor)
-router.post("/admissions/discharge", (req, res) => {
+router.post("/admissions/discharge", async (req, res) => {
     try {
-        const { patientId } = req.body;
+        const { patientId, strategy } = req.body;
         if (!patientId) {
             return res.status(400).json({ error: "Missing patientId parameter." });
         }
 
-        const history = db.getHistory();
-        const patientData = history.find(p => p.id === patientId);
-        if (!patientData) {
+        const patientDoc = await Patient.findOne({ id: patientId });
+        if (!patientDoc) {
             return res.status(404).json({ error: "Patient record not found." });
         }
 
-        const patient = PatientFactory.reconstitute(patientData);
+        const patient = PatientFactory.reconstitute(patientDoc.toObject());
         
-        // Invoke Facade
-        const invoice = admissionFacade.dischargePatient(patient);
+        // Invoke Facade with Strategy Pattern discount policy parameter
+        const billingSummary = await admissionFacade.dischargePatient(patient, strategy);
 
         broadcastEvent("queueUpdated", { discharged: patient.serialize() });
 
-        res.json(invoice);
+        res.json({
+            receiptId: "REC-" + Math.floor(Math.random() * 90000 + 10000),
+            patientName: patient.name,
+            bedReleased: patientDoc.bedNumber || "ICU-101",
+            totalAmount: billingSummary.total,
+            policyUsed: strategy || "none"
+        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
 // Direct Outpatient Discharge (No Admission)
-router.post("/consultations/discharge", (req, res) => {
+router.post("/consultations/discharge", async (req, res) => {
     try {
         const { patientId } = req.body;
         if (!patientId) {
             return res.status(400).json({ error: "Missing patientId." });
         }
 
-        const history = db.getHistory();
-        const patientData = history.find(p => p.id === patientId);
-        if (!patientData) {
+        const patientDoc = await Patient.findOne({ id: patientId });
+        if (!patientDoc) {
             return res.status(404).json({ error: "Patient record not found." });
         }
 
-        const patient = PatientFactory.reconstitute(patientData);
+        const patient = PatientFactory.reconstitute(patientDoc.toObject());
         const currentState = StateFactory.getState(patient.stateName);
         
         // Transition state to DischargedState directly
         currentState.next(patient, 'discharge');
 
         // Free doctor shift
-        const doctors = db.getDoctors();
+        const doctors = await db.getDoctors();
         for (let key in doctors) {
             if (doctors[key].patientId === patient.id) {
-                db.updateDoctorAvailability(key, true, null);
+                await db.updateDoctorAvailability(key, true, null);
             }
         }
 
-        db.saveHistoryPatient(patient.serialize());
+        await db.saveHistoryPatient(patient.serialize());
 
         broadcastEvent("queueUpdated", { discharged: patient.serialize() });
 
@@ -327,11 +323,94 @@ router.post("/consultations/discharge", (req, res) => {
 });
 
 // Reset System
-router.post("/reset", (req, res) => {
+router.post("/reset", async (req, res) => {
     try {
-        db.resetAll();
+        await db.resetAll();
         broadcastEvent("queueUpdated", { reset: true });
         res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Add Prescribed Medication
+router.post("/consultations/medication", async (req, res) => {
+    try {
+        const { patientId, medicationName } = req.body;
+        if (!patientId || !medicationName) {
+            return res.status(400).json({ error: "Missing parameters: patientId, medicationName." });
+        }
+
+        const patientDoc = await Patient.findOne({ id: patientId });
+        if (!patientDoc) {
+            return res.status(404).json({ error: "Patient record not found." });
+        }
+
+        const patient = PatientFactory.reconstitute(patientDoc.toObject());
+        
+        if (!patient.billingSummary) {
+            patient.billingSummary = {
+                baseFee: patient.triageType === 'Emergency' ? 250 : patient.triageType === 'OPD' ? 100 : 50,
+                bedCharge: 0,
+                durationDays: 0,
+                pharmacyCharge: 0,
+                prescriptions: [],
+                total: patient.triageType === 'Emergency' ? 250 : patient.triageType === 'OPD' ? 100 : 50,
+                bedCategory: "None (Outpatient)",
+                status: "Unpaid"
+            };
+        }
+
+        const medCost = Math.floor(Math.random() * 20) + 15; // Random cost between $15 and $35
+        patient.billingSummary.prescriptions = patient.billingSummary.prescriptions || [];
+        patient.billingSummary.prescriptions.push(`${medicationName} ($${medCost})`);
+        
+        patient.billingSummary.pharmacyCharge = (patient.billingSummary.pharmacyCharge || 0) + medCost;
+        patient.billingSummary.total = (patient.billingSummary.total || 0) + medCost;
+        
+        patient.addLog(`[Prescription] Medication added by physician: ${medicationName}. Pharmacy charge: +$${medCost}.`);
+
+        await db.saveHistoryPatient(patient.serialize());
+
+        broadcastEvent("queueUpdated", { medicationAdded: patient.serialize() });
+
+        res.json(patient.serialize());
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Remove Prescribed Medication
+router.post("/consultations/medication/remove", async (req, res) => {
+    try {
+        const { patientId, index } = req.body;
+        if (patientId === undefined || index === undefined) {
+            return res.status(400).json({ error: "Missing parameters: patientId, index." });
+        }
+
+        const patientDoc = await Patient.findOne({ id: patientId });
+        if (!patientDoc) {
+            return res.status(404).json({ error: "Patient record not found." });
+        }
+
+        const patient = PatientFactory.reconstitute(patientDoc.toObject());
+        
+        if (patient.billingSummary && patient.billingSummary.prescriptions && patient.billingSummary.prescriptions[index]) {
+            const item = patient.billingSummary.prescriptions[index];
+            const costMatch = item.match(/\(\$(\d+)\)/);
+            const medCost = costMatch ? parseInt(costMatch[1]) : 0;
+
+            patient.billingSummary.prescriptions.splice(index, 1);
+            patient.billingSummary.pharmacyCharge = Math.max(0, patient.billingSummary.pharmacyCharge - medCost);
+            patient.billingSummary.total = Math.max(0, patient.billingSummary.total - medCost);
+
+            patient.addLog(`[Prescription] Medication removed: ${item}.`);
+            await db.saveHistoryPatient(patient.serialize());
+
+            broadcastEvent("queueUpdated", { medicationRemoved: patient.serialize() });
+        }
+
+        res.json(patient.serialize());
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

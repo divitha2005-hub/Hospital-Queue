@@ -15,8 +15,8 @@ class BedManager {
         };
     }
 
-    allocateBed(category, patientId, db) {
-        const beds = db.getBeds();
+    async allocateBed(category, patientId, db) {
+        const beds = await db.getBeds();
         const availableBeds = beds[category] || [];
         
         if (availableBeds.length === 0) {
@@ -24,12 +24,12 @@ class BedManager {
         }
 
         const bedNumber = availableBeds[0];
-        db.allocateBed(bedNumber, category, patientId);
+        await db.allocateBed(bedNumber, category, patientId);
         return bedNumber;
     }
 
-    releaseBed(bedNumber, category, db) {
-        db.releaseBed(bedNumber, category);
+    async releaseBed(bedNumber, category, db) {
+        await db.releaseBed(bedNumber, category);
     }
 
     getDailyRate(category) {
@@ -42,8 +42,8 @@ class BedManager {
  * Coordinates shifts and registers doctors assigned to ward occupants.
  */
 class DoctorScheduler {
-    assignDoctor(patient, db) {
-        const doctorsMap = db.getDoctors();
+    async assignDoctor(patient, db) {
+        const doctorsMap = await db.getDoctors();
         let assignedDoc = null;
 
         // Check if there is an available doctor
@@ -59,12 +59,12 @@ class DoctorScheduler {
             assignedDoc = doctorsMap["D2"];
         }
 
-        db.updateDoctorAvailability(assignedDoc.id, false, patient.id);
+        await db.updateDoctorAvailability(assignedDoc.id, false, patient.id);
         return { id: assignedDoc.id, name: assignedDoc.name, specialty: assignedDoc.specialty };
     }
 
-    freeDoctor(docId, db) {
-        db.updateDoctorAvailability(docId, true, null);
+    async freeDoctor(docId, db) {
+        await db.updateDoctorAvailability(docId, true, null);
     }
 }
 
@@ -112,12 +112,12 @@ class AdmissionFacade {
         this.db = DatabaseEngine.getInstance();
     }
 
-    admitPatient(patient, bedCategory, durationDays) {
+    async admitPatient(patient, bedCategory, durationDays) {
         // 1. Allocate bed
-        const bedNumber = this.bedManager.allocateBed(bedCategory, patient.id, this.db);
+        const bedNumber = await this.bedManager.allocateBed(bedCategory, patient.id, this.db);
         
         // 2. Assign doctor
-        const supervisingDoctor = this.doctorScheduler.assignDoctor(patient, this.db);
+        const supervisingDoctor = await this.doctorScheduler.assignDoctor(patient, this.db);
         
         // 3. Compile bill
         const dailyRate = this.bedManager.getDailyRate(bedCategory);
@@ -134,7 +134,7 @@ class AdmissionFacade {
         patient.addLog(`Admitted to room ${bedNumber}. Billing total: $${bill.total}.`);
         
         // 5. Persist patient to database
-        this.db.saveHistoryPatient(patient.serialize());
+        await this.db.saveHistoryPatient(patient.serialize());
         
         return {
             bed: bedNumber,
@@ -143,28 +143,34 @@ class AdmissionFacade {
         };
     }
 
-    dischargePatient(patient) {
+    async dischargePatient(patient, strategyName = "none") {
         if (patient.stateName !== 'Admitted') {
             throw new Error("Facade Exception: Only currently admitted patients can undergo checkout.");
         }
 
         // 1. Release bed
-        this.bedManager.releaseBed(patient.bedNumber, patient.billingSummary.bedCategory, this.db);
+        await this.bedManager.releaseBed(patient.bedNumber, patient.billingSummary.bedCategory, this.db);
         
         // 2. Free doctor
-        this.doctorScheduler.freeDoctor(patient.assignedDoctor.id, this.db);
+        await this.doctorScheduler.freeDoctor(patient.assignedDoctor.id, this.db);
         
-        // 3. Settle bill
+        // 3. Settle bill and apply Strategy Pattern discount
+        const { StrategyFactory } = require("./strategy");
+        const strategy = StrategyFactory.getStrategy(strategyName);
+        
+        const bill = patient.billingSummary;
+        const finalTotal = strategy.calculateTotal(bill.baseFee, bill.bedCharge, bill.pharmacyCharge);
+        patient.billingSummary.total = finalTotal;
         patient.billingSummary.status = "Paid";
         
         // 4. Transition state
         const currentState = StateFactory.getState(patient.stateName);
         currentState.next(patient, 'discharge'); // Validates and transitions to DischargedState
         
-        patient.addLog("Receipt paid. Released room assignment.");
+        patient.addLog(`Receipt paid ($${finalTotal}) using strategy: ${strategy.getPolicyDescription()}. Released room assignment.`);
         
         // 5. Persist update
-        this.db.saveHistoryPatient(patient.serialize());
+        await this.db.saveHistoryPatient(patient.serialize());
         
         return patient.billingSummary;
     }
