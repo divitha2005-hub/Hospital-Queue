@@ -180,12 +180,12 @@ router.post("/consultations/escalate", async (req, res) => {
             return res.status(400).json({ error: "Missing parameters: patientId, issue." });
         }
 
-        const patientDoc = await Patient.findOne({ id: patientId });
+        const patientDoc = await db.getPatientById(patientId);
         if (!patientDoc) {
             return res.status(404).json({ error: "Patient record not found." });
         }
 
-        const patient = PatientFactory.reconstitute(patientDoc.toObject());
+        const patient = PatientFactory.reconstitute(patientDoc);
         
         // Setup Escalation Chain
         const nurse = new NurseHandler();
@@ -227,12 +227,12 @@ router.post("/admissions/admit", async (req, res) => {
             return res.status(400).json({ error: "Missing parameters: patientId, bedCategory, durationDays." });
         }
 
-        const patientDoc = await Patient.findOne({ id: patientId });
+        const patientDoc = await db.getPatientById(patientId);
         if (!patientDoc) {
             return res.status(404).json({ error: "Patient record not found in system." });
         }
 
-        const patient = PatientFactory.reconstitute(patientDoc.toObject());
+        const patient = PatientFactory.reconstitute(patientDoc);
         
         // Invoke AdmissionFacade
         const result = await admissionFacade.admitPatient(patient, bedCategory, parseInt(durationDays));
@@ -261,12 +261,12 @@ router.post("/admissions/discharge", async (req, res) => {
             return res.status(400).json({ error: "Missing patientId parameter." });
         }
 
-        const patientDoc = await Patient.findOne({ id: patientId });
+        const patientDoc = await db.getPatientById(patientId);
         if (!patientDoc) {
             return res.status(404).json({ error: "Patient record not found." });
         }
 
-        const patient = PatientFactory.reconstitute(patientDoc.toObject());
+        const patient = PatientFactory.reconstitute(patientDoc);
         
         // Invoke Facade with Strategy Pattern discount policy parameter
         const billingSummary = await admissionFacade.dischargePatient(patient, strategy);
@@ -293,12 +293,12 @@ router.post("/consultations/discharge", async (req, res) => {
             return res.status(400).json({ error: "Missing patientId." });
         }
 
-        const patientDoc = await Patient.findOne({ id: patientId });
+        const patientDoc = await db.getPatientById(patientId);
         if (!patientDoc) {
             return res.status(404).json({ error: "Patient record not found." });
         }
 
-        const patient = PatientFactory.reconstitute(patientDoc.toObject());
+        const patient = PatientFactory.reconstitute(patientDoc);
         const currentState = StateFactory.getState(patient.stateName);
         
         // Transition state to DischargedState directly
@@ -341,12 +341,12 @@ router.post("/consultations/medication", async (req, res) => {
             return res.status(400).json({ error: "Missing parameters: patientId, medicationName." });
         }
 
-        const patientDoc = await Patient.findOne({ id: patientId });
+        const patientDoc = await db.getPatientById(patientId);
         if (!patientDoc) {
             return res.status(404).json({ error: "Patient record not found." });
         }
 
-        const patient = PatientFactory.reconstitute(patientDoc.toObject());
+        const patient = PatientFactory.reconstitute(patientDoc);
         
         if (!patient.billingSummary) {
             patient.billingSummary = {
@@ -388,12 +388,12 @@ router.post("/consultations/medication/remove", async (req, res) => {
             return res.status(400).json({ error: "Missing parameters: patientId, index." });
         }
 
-        const patientDoc = await Patient.findOne({ id: patientId });
+        const patientDoc = await db.getPatientById(patientId);
         if (!patientDoc) {
             return res.status(404).json({ error: "Patient record not found." });
         }
 
-        const patient = PatientFactory.reconstitute(patientDoc.toObject());
+        const patient = PatientFactory.reconstitute(patientDoc);
         
         if (patient.billingSummary && patient.billingSummary.prescriptions && patient.billingSummary.prescriptions[index]) {
             const item = patient.billingSummary.prescriptions[index];
