@@ -1,49 +1,87 @@
-# BioCare EHR - Design-Pattern Driven Enterprise Health Record System
+# 🏥 BioCare EHR - Design-Pattern Driven Enterprise Healthcare System
 
-BioCare EHR is a high-fidelity, interactive clinical workspace and hospital queue simulator built to demonstrate advanced software engineering architectures and **7 GoF (Gang of Four) Design Patterns** in a live Node.js, Express, and MongoDB environment.
+[![JavaScript](https://img.shields.io/badge/Language-ES6%20JavaScript-f7df1e.svg?style=flat-square&logo=javascript)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
+[![Node.js](https://img.shields.io/badge/Runtime-Node.js-339933.svg?style=flat-square&logo=node.js)](https://nodejs.org/)
+[![Express](https://img.shields.io/badge/Framework-Express%20v4-000000.svg?style=flat-square&logo=express)](https://expressjs.com/)
+[![MongoDB](https://img.shields.io/badge/Database-MongoDB%20Atlas-47A248.svg?style=flat-square&logo=mongodb)](https://www.mongodb.com/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
-The system manages real-time patient triaging, physician consult channels, priority queue sorting, ward bed allocations, severity-based clinical escalations, and customizable billing policies.
-
----
-
-## 🏛️ System Architecture & Design Patterns
-
-BioCare EHR leverages a series of design patterns to ensure loose coupling, modularity, and high-fidelity runtime simulation:
-
-### 1. Creational Patterns
-*   **Singleton Pattern (`DatabaseEngine`)**
-    *   **Implementation**: `server/db.js`
-    *   **Purpose**: Ensures a single, authoritative connection pool to the MongoDB Atlas cluster. It prevents concurrent database locking and acts as the unique gateway for patient, doctor, and bed data reads/writes.
-*   **Factory Method Pattern (`PatientFactory`)**
-    *   **Implementation**: `server/patterns/factory.js`
-    *   **Purpose**: Encapsulates the instantiation of different patient categories. Depending on the triage desk inputs, the factory instantiates concrete subclasses (`OPDPatient`, `EmergencyPatient`, `FollowUpPatient`) which map mongoose schemas to distinct severity rules and base consultation fees.
-
-### 2. Behavioral Patterns
-*   **State Pattern (`PatientState`)**
-    *   **Implementation**: `server/patterns/state.js`
-    *   **Purpose**: Manages the patient's lifecycle transitions (`WaitingState` ➔ `ConsultationState` ➔ `AdmittedState` ➔ `DischargedState`). Illegal operations (e.g. attempting to discharge a patient without checking out or consult before triaging) are blocked by the state wrapper.
-*   **Chain of Responsibility Pattern (`EscalationHandler`)**
-    *   **Implementation**: `server/patterns/chain.js`
-    *   **Purpose**: Handles clinical warnings and patient severity escalations. Warnings flow along a chain of handlers (`Nurse` ➔ `JuniorDoctor` ➔ `Specialist`). If a case has a severity score $\le 3$, it is resolved at the nurse level; if $\le 7$, it is handled by a Junior Doctor; otherwise, it escalates to the Specialist for admission.
-*   **Observer Pattern (SSE Database Subject)**
-    *   **Implementation**: `server/routes.js` & `public/js/app.js`
-    *   **Purpose**: Synchronizes frontend displays in real-time. The server exposes a Server-Sent Events (SSE) channel `/api/events` acting as a network Subject. When the database state changes, update notifications are broadcast to all connected browser displays (Observers).
-*   **Strategy Pattern (`BillingStrategy`)**
-    *   **Implementation**: `server/patterns/strategy.js`
-    *   **Purpose**: Encapsulates interchangeable clinical billing discount policies. During checkout (Step 6), selecting different insurance options dynamically swaps strategies (`StandardBillingStrategy`, `GovernmentInsuredStrategy`, `PremiumInsuredStrategy`, or `CorporateBillingStrategy`) to recalculate grand totals dynamically.
-
-### 3. Structural Patterns
-*   **Facade Pattern (`AdmissionFacade`)**
-    *   **Implementation**: `server/patterns/facade.js`
-    *   **Purpose**: Simplifies complex transactions by wrapping subsystem operations. During patient admission or discharge, the facade coordinates across the `BedManager` (booking beds), `DoctorScheduler` (allocating supervisors), and `BillingSystem` (compiling charges) models simultaneously.
+**BioCare EHR** is a high-fidelity, interactive clinical workspace and hospital queue simulator. Designed for enterprise-level performance, it showcases **7 Gang of Four (GoF) Design Patterns** in a real-time full-stack Node.js environment, utilizing polymorphic data models, state lifecycle management, and transactional facade abstractions.
 
 ---
 
-## 💻 Technology Stack
-*   **Backend**: Node.js, Express (REST API & SSE Event broadcasting)
-*   **Database**: MongoDB Atlas (Mongoose ODM with polymorphic discriminators)
-*   **Frontend**: Vanilla HTML5, CSS3 Grid/Flex (Frosted glassmorphism, responsive split-screen layouts, holographic splash animations), and Vanilla Javascript ES6.
-*   **Testing**: Custom automated test harness assertions (`node js/test.js`)
+## 🗺️ Architectural Workflow Map
+
+This diagram illustrates how patient data flows through the 7 design patterns from triage to billing checkout:
+
+```mermaid
+graph TD
+    A[Triage Input Form] -->|1. Instantiate Subclass| B(PatientFactory)
+    B -->|2. Get Database Connection| C{DatabaseEngine Singleton}
+    C -->|3. Set Initial State| D[WaitingState]
+    D -->|4. Call Next Patient| E[ConsultationState]
+    E -->|5. Escalate Case| F[Chain of Responsibility Handler]
+    F -->|Nurse / Junior / Specialist| G[Triage Severity Assessment]
+    G -->|6. Ward Booking & Supervision| H[AdmissionFacade]
+    H -->|ICU / Private / General Ward| I[AdmittedState]
+    I -->|7. Calculate Discounts| J[BillingStrategy Policy]
+    J -->|Standard / Gov / Premium / Corporate| K[DischargedState]
+    
+    style B fill:#5b5bc2,stroke:#fff,stroke-width:1px,color:#fff
+    style C fill:#1e293b,stroke:#fff,stroke-width:1px,color:#fff
+    style F fill:#c2410c,stroke:#fff,stroke-width:1px,color:#fff
+    style H fill:#15803d,stroke:#fff,stroke-width:1px,color:#fff
+    style J fill:#a21caf,stroke:#fff,stroke-width:1px,color:#fff
+```
+
+---
+
+## 🏛️ Comprehensive Design Pattern Specifications
+
+BioCare EHR is engineered to show how design patterns decouple business logic from framework concerns:
+
+### 1. Singleton Pattern (`DatabaseEngine`)
+*   **Source File**: `server/db.js`
+*   **Why it matters**: Ensures a single, thread-safe gateway to the database. It prevents resource exhaustion and connection leakage by caching a unique authoritative connection instance.
+*   **Developer Highlight**: Includes an **Automatic Offline Fallback** that detects connection timeouts (e.g. Atlas IP Whitelist blocks) and redirects operations to a local `database.json` file on disk, maintaining 100% application uptime.
+
+### 2. Factory Method Pattern (`PatientFactory`)
+*   **Source File**: `server/patterns/factory.js`
+*   **Why it matters**: Decouples the controller logic from concrete patient classes. It dynamically instantiates distinct clinical categories (`OPDPatient`, `EmergencyPatient`, `FollowUpPatient`) using database discriminators to apply category-specific base rates and initial triage severity limits.
+
+### 3. State Pattern (`PatientState` & Lifecycle Manager)
+*   **Source File**: `server/patterns/state.js`
+*   **Why it matters**: Protects business rules by encapsulating state transitions. A patient moves through `Waiting` ➔ `Consultation` ➔ `Admitted` ➔ `Discharged`. The State pattern blocks illegal transitions (e.g., admitting a patient directly from waiting, or discharging a patient without completing billing checkout) at the model level.
+
+### 4. Chain of Responsibility Pattern (`EscalationHandler`)
+*   **Source File**: `server/patterns/chain.js`
+*   **Why it matters**: Avoids coupling a clinical alert requester to a single recipient. Warnings are processed through a chain: **Nurse** ($\le 3$ severity) ➔ **Junior Doctor** ($\le 7$ severity) ➔ **Specialist** ($> 7$ severity). Each level evaluates if it can resolve the case or if it must pass the context to the next supervisor in line.
+
+### 5. Facade Pattern (`AdmissionFacade`)
+*   **Source File**: `server/patterns/facade.js`
+*   **Why it matters**: Provides a simplified interface to a complex set of subsystems. Instead of the API route directly talking to the `BedManager`, `DoctorScheduler`, and `BillingSystem`, the `AdmissionFacade` coordinates the transactions in a single call, ensuring atomic state operations.
+
+### 6. Strategy Pattern (`BillingStrategy`)
+*   **Source File**: `server/patterns/strategy.js`
+*   **Why it matters**: Implements the Open/Closed Principle. It encapsulates billing discount calculations into interchangeable strategies:
+    *   **Standard Strategy**: Flat rates with zero discounts.
+    *   **Government Insured**: $70\%$ discount on ward stay, $30\%$ discount on prescriptions.
+    *   **Premium Private Insured**: $50\%$ discount on consultation fees, $40\%$ discount on ward stay.
+    *   **Corporate Partner**: Flat $15\%$ discount on the final total.
+    Selecting an option on checkout dynamically swaps the calculation algorithm at runtime.
+
+### 7. Observer Pattern (SSE Observer Streams)
+*   **Source File**: `server/routes.js` & `public/js/app.js`
+*   **Why it matters**: Keeps the UI synchronized with the backend state. The server acts as a Server-Sent Events (SSE) **Subject** publishing update alerts (`queueUpdated`, `patientAdmitted`, etc.) when database states shift. Browser panels behave as **Observers**, updating the UI grid instantly.
+
+---
+
+## 🎨 Premium UI/UX Design System
+
+The frontend is a bespoke Single Page Application (SPA) designed to feel like a high-end medical console:
+*   **Glassmorphic Console Cards**: Radial gradients, frosted-glass filters, and subtle borders create visual depth.
+*   **Snappy Telemetry Visualizer**: Pulsing status indicators, rotating neon dashed radar rings, and a breathing ECG heart monitor welcome screen.
+*   **Live Interactive Design Inspector**: A slide-out sidebar allows users to inspect class definitions, UML structures, and execution metrics in real-time.
 
 ---
 
@@ -51,74 +89,30 @@ BioCare EHR leverages a series of design patterns to ensure loose coupling, modu
 
 ### 📋 Prerequisites
 *   Node.js (v16.x or higher)
-*   A running MongoDB Atlas Database cluster URI
+*   NPM (v8.x or higher)
 
-### 🔧 Installation & Setup
+### 🔧 Installation & Running
 1.  Clone the repository:
     ```bash
-    git clone <your-repo-url>
+    git clone https://github.com/divitha2005-hub/Hospital-Queue.git
     cd hospital_queue_system
     ```
 2.  Install dependencies:
     ```bash
     npm install
     ```
-3.  Set up your environment variables:
-    Create a `.env` file in the root directory:
-    ```env
-    MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/biocare_db
-    PORT=8000
-    ```
-
-### 🏃 Running the Application
-*   Start the development server:
+3.  Launch the development server:
     ```bash
     npm start
     ```
-*   Access the EHR dashboard in your browser:
-    ```
-    http://localhost:8000
-    ```
+4.  Open your browser and navigate to:
+    🔗 **[http://localhost:8000](http://localhost:8000)**
 
 ---
 
-## 🧪 Verification & Testing
-To run the automated backend test suite verifying the compilation and implementation of all 7 design patterns:
+## 🧪 Automated Testing
+Run the automated design pattern test harness to verify class behaviors, factory outputs, state transitions, chain escalations, facade actions, and strategy arithmetic:
 ```bash
 node js/test.js
 ```
-
-### Expected Output:
-```text
-=== STARTING AUTOMATED DESIGN PATTERN TESTS ===
-🌱 Seeding Doctor Collection...
-🌱 Seeding Bed Collection...
-
-[Singleton Pattern Test]
-✅ Success: DatabaseEngine.getInstance() returns the exact same instance.
-
-[Factory Pattern Test]
-✅ Success: OPDPatient created with correct type and symptoms.
-✅ Success: EmergencyPatient created with correct type and severity.
-
-[Queue Sorting Test (Database Integration)]
-✅ Success: Queue sorting correctly placed Emergency patient first.
-
-[State Pattern Transitions Test]
-✅ Success: WaitingState -> ConsultationState transition correct.
-
-[Chain of Responsibility Test]
-✅ Success: Escalated past Nurse & Junior Doctor, resolved by Specialist.
-
-[Facade Pattern Test]
-✅ Success: AdmissionFacade successfully allocated Bed & Doctor.
-✅ Success: AdmissionFacade successfully discharged patient.
-
-[Strategy Pattern Test]
-✅ Success: StandardBillingStrategy calculates correct flat sum ($1600).
-✅ Success: GovernmentInsuredStrategy calculates correct discounted sum ($750).
-✅ Success: PremiumInsuredStrategy calculates correct discounted sum ($1150).
-✅ Success: CorporateBillingStrategy calculates correct flat total discount ($1360).
-
-🎉 ALL DESIGN PATTERN TESTS PASSED SUCCESSFULLY! 🎉
-```
+*(All 7 design pattern verification blocks will run and output assertions to the terminal, falling back to local JSON structures if MongoDB Atlas is offline).*
