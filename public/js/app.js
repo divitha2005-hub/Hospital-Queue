@@ -200,8 +200,18 @@ document.addEventListener("DOMContentLoaded", () => {
     let activeModalPatientId = null;
     let currentTutorialStep = 1;
 
+    // Chart instances for Dashboard
+    let chartPatientStatesInstance = null;
+    let chartTriageCategoriesInstance = null;
+    let chartWardBedsInstance = null;
+    let chartBillingStrategiesInstance = null;
+
     // Tab view details for Header sync
     const tabHeaders = {
+        dashboard: {
+            title: "HOSPITAL ANALYTICS COMMAND CENTER",
+            subtitle: "Comprehensive real-time telemetry, bed utilization, clinical acuity distribution, and financial intelligence."
+        },
         triage: {
             title: "PATIENT TRIAGE ENTRANCE",
             subtitle: "Register and classify patients using the Factory Method pattern."
@@ -267,6 +277,7 @@ document.addEventListener("DOMContentLoaded", () => {
             renderBedsUI();
             updateAdmittedListUI();
             renderConsultationWorkspace();
+            updateDashboardAnalytics();
         } catch (err) {
             console.error("EHR API read error:", err);
         }
@@ -323,8 +334,12 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("workspace-active-subtitle").innerText = headerInfo.subtitle;
         }
 
-        // Auto-sync Inspector focused pattern tab
-        if (tabId === "triage") selectInspectorTab("factory");
+        // Auto-sync Inspector focused pattern tab & trigger specific tab re-renders
+        if (tabId === "dashboard") {
+            selectInspectorTab("observer");
+            updateDashboardAnalytics();
+        }
+        else if (tabId === "triage") selectInspectorTab("factory");
         else if (tabId === "queue") selectInspectorTab("singleton");
         else if (tabId === "doctors") selectInspectorTab("state");
         else if (tabId === "consultation") selectInspectorTab("state");
@@ -332,13 +347,25 @@ document.addEventListener("DOMContentLoaded", () => {
         else if (tabId === "billing") selectInspectorTab("facade");
     }
 
+    // Export globally for inline buttons
+    window.switchWorkspaceTab = switchWorkspaceTab;
+
     // Attach Sidebar Click Listeners
     document.querySelectorAll(".nav-item").forEach(item => {
         item.addEventListener("click", (e) => {
             e.preventDefault();
             const tabTarget = item.getAttribute("data-tab-target");
-            switchWorkspaceTab(tabTarget);
-            
+
+            if (tabTarget === "dashboard") {
+                switchWorkspaceTab("dashboard");
+                const banner = document.querySelector(".tutorial-banner");
+                if (banner) banner.style.display = "none";
+                return;
+            }
+
+            const banner = document.querySelector(".tutorial-banner");
+            if (banner) banner.style.display = "block";
+
             // Sync tutorial stepper step to match navigation category
             if (tabTarget === "triage") currentTutorialStep = 1;
             else if (tabTarget === "queue") currentTutorialStep = 2;
@@ -1315,6 +1342,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     window.jumpToTutorialStep = function(stepNum) {
+        const banner = document.querySelector(".tutorial-banner");
+        if (banner) banner.style.display = "block";
         currentTutorialStep = stepNum;
         updateTutorialBanner();
     };
@@ -2395,9 +2424,357 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 32); // Fast, snappy, professional boot speed
     }
 
+    // -------------------------------------------------------------
+    // Executive Analytics Dashboard Visualizer & Chart Manager
+    // -------------------------------------------------------------
+    function updateDashboardAnalytics() {
+        const dashPanel = document.getElementById("panel-dashboard");
+        if (!dashPanel) return;
+
+        // 1. Compute Analytics Metrics
+        const totalPatients = localPatients.length + localHistory.length;
+        const waitingCount = localPatients.length;
+        const inConsultCount = localHistory.filter(p => p.stateName === "Consultation").length;
+        const admittedCount = localHistory.filter(p => p.stateName === "Admitted").length;
+        const dischargedCount = localHistory.filter(p => p.stateName === "Discharged").length;
+
+        const allPatients = [...localPatients, ...localHistory];
+        const emergencyCount = allPatients.filter(p => p.triageType === "Emergency").length;
+        const opdCount = allPatients.filter(p => p.triageType === "OPD").length;
+        const followupCount = allPatients.filter(p => p.triageType === "Follow-up" || p.triageType === "FollowUp").length;
+
+        // Critical acuity count (severity >= 8)
+        const criticalCount = allPatients.filter(p => (parseInt(p.severityScore) || 0) >= 8).length;
+        const totalSeverity = allPatients.reduce((sum, p) => sum + (parseInt(p.severityScore) || 0), 0);
+        const avgSeverity = allPatients.length > 0 ? (totalSeverity / allPatients.length).toFixed(1) : "0.0";
+
+        // Bed occupancy metrics
+        const totalAllocatedBeds = Object.keys(localAllocatedBeds || {}).length;
+        const totalBedsCount = 40; // 10 ICU + 10 Private + 20 General
+        const bedOccupancyPct = Math.round((totalAllocatedBeds / totalBedsCount) * 100);
+
+        // Bed breakdown by ward
+        const icuOccupied = Object.keys(localAllocatedBeds || {}).filter(b => b.startsWith("ICU")).length;
+        const privateOccupied = Object.keys(localAllocatedBeds || {}).filter(b => b.startsWith("PR")).length;
+        const generalOccupied = Object.keys(localAllocatedBeds || {}).filter(b => b.startsWith("GW")).length;
+
+        const icuAvailable = Math.max(0, 10 - icuOccupied);
+        const privateAvailable = Math.max(0, 10 - privateOccupied);
+        const generalAvailable = Math.max(0, 20 - generalOccupied);
+
+        // Revenue calculations
+        let totalRevenue = 0;
+        let settledInvoices = 0;
+        const strategyRevenue = {
+            "Standard Self-Pay": 0,
+            "Government Health Shield": 0,
+            "Premium Private Insurance": 0,
+            "Corporate Partner": 0
+        };
+
+        localHistory.forEach(p => {
+            if (p.billingSummary && p.billingSummary.total) {
+                totalRevenue += p.billingSummary.total;
+                if (p.billingSummary.status === "Paid" || p.stateName === "Discharged") {
+                    settledInvoices++;
+                }
+
+                // Attribute strategy from logs
+                const logsStr = (p.logs || []).join(" ").toLowerCase();
+                if (logsStr.includes("government") || logsStr.includes("govt")) {
+                    strategyRevenue["Government Health Shield"] += p.billingSummary.total;
+                } else if (logsStr.includes("premium")) {
+                    strategyRevenue["Premium Private Insurance"] += p.billingSummary.total;
+                } else if (logsStr.includes("corporate")) {
+                    strategyRevenue["Corporate Partner"] += p.billingSummary.total;
+                } else {
+                    strategyRevenue["Standard Self-Pay"] += p.billingSummary.total;
+                }
+            }
+        });
+
+        // Doctor load metrics
+        const docList = Object.values(localDoctors || {});
+        const busyDocsCount = docList.filter(d => !d.available).length;
+
+        // 2. Update KPI Elements in DOM
+        const elTotalPatients = document.getElementById("kpi-total-patients");
+        if (elTotalPatients) elTotalPatients.innerText = totalPatients;
+
+        const elTotalBreakdown = document.getElementById("kpi-total-breakdown");
+        if (elTotalBreakdown) elTotalBreakdown.innerText = `${waitingCount} Queue / ${localHistory.length} History`;
+
+        const elWaitingQueue = document.getElementById("kpi-waiting-queue");
+        if (elWaitingQueue) elWaitingQueue.innerText = waitingCount;
+
+        const elEmergencyCount = document.getElementById("kpi-emergency-count");
+        if (elEmergencyCount) elEmergencyCount.innerText = `${localPatients.filter(p => p.triageType === 'Emergency').length} Emergency Priority`;
+
+        const elActiveConsult = document.getElementById("kpi-active-consultations");
+        if (elActiveConsult) elActiveConsult.innerText = inConsultCount;
+
+        const elActiveDocs = document.getElementById("kpi-active-docs");
+        if (elActiveDocs) elActiveDocs.innerText = `${busyDocsCount} / ${docList.length || 12} Doctors Consulting`;
+
+        const elBedOccupancy = document.getElementById("kpi-bed-occupancy");
+        if (elBedOccupancy) elBedOccupancy.innerText = `${bedOccupancyPct}%`;
+
+        const elBedBreakdown = document.getElementById("kpi-bed-breakdown");
+        if (elBedBreakdown) elBedBreakdown.innerText = `${totalAllocatedBeds} / ${totalBedsCount} Beds Allocated`;
+
+        const elRevenueTotal = document.getElementById("kpi-revenue-total");
+        if (elRevenueTotal) elRevenueTotal.innerText = `$${totalRevenue.toLocaleString()}`;
+
+        const elPaidInvoices = document.getElementById("kpi-paid-invoices");
+        if (elPaidInvoices) elPaidInvoices.innerText = `${settledInvoices} Invoices Settled`;
+
+        const elCriticalCases = document.getElementById("kpi-critical-cases");
+        if (elCriticalCases) elCriticalCases.innerText = criticalCount;
+
+        const elAvgSeverity = document.getElementById("kpi-avg-severity");
+        if (elAvgSeverity) elAvgSeverity.innerText = `Avg Acuity: ${avgSeverity} / 10`;
+
+        const elTimestamp = document.getElementById("dash-last-updated");
+        if (elTimestamp) elTimestamp.innerText = `Synced at ${new Date().toLocaleTimeString()}`;
+
+        // 3. Render / Update Charts if Chart.js is present
+        if (typeof Chart !== "undefined") {
+            try {
+                // Dark theme defaults for Chart.js
+                Chart.defaults.color = "#94a3b8";
+                Chart.defaults.font.family = "'JetBrains Mono', sans-serif";
+
+                // Chart 1: Patient Lifecycle States (Doughnut)
+                const ctx1 = document.getElementById("chart-patient-states");
+                if (ctx1) {
+                    if (chartPatientStatesInstance) chartPatientStatesInstance.destroy();
+                    chartPatientStatesInstance = new Chart(ctx1, {
+                        type: "doughnut",
+                        data: {
+                            labels: ["Waiting", "Consultation", "Admitted", "Discharged"],
+                            datasets: [{
+                                data: [waitingCount, inConsultCount, admittedCount, dischargedCount],
+                                backgroundColor: ["#3b82f6", "#10b981", "#8b5cf6", "#64748b"],
+                                borderColor: "#0f172a",
+                                borderWidth: 2,
+                                hoverOffset: 6
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            cutout: "68%",
+                            plugins: {
+                                legend: { display: false }
+                            }
+                        }
+                    });
+
+                    // Custom Legend
+                    const leg1 = document.getElementById("legend-patient-states");
+                    if (leg1) {
+                        leg1.innerHTML = `
+                            <div class="legend-chip"><span class="legend-dot" style="background:#3b82f6;"></span> Waiting (${waitingCount})</div>
+                            <div class="legend-chip"><span class="legend-dot" style="background:#10b981;"></span> Consultation (${inConsultCount})</div>
+                            <div class="legend-chip"><span class="legend-dot" style="background:#8b5cf6;"></span> Admitted (${admittedCount})</div>
+                            <div class="legend-chip"><span class="legend-dot" style="background:#64748b;"></span> Discharged (${dischargedCount})</div>
+                        `;
+                    }
+                }
+
+                // Chart 2: Triage Classification Breakdown (Bar)
+                const ctx2 = document.getElementById("chart-triage-categories");
+                if (ctx2) {
+                    if (chartTriageCategoriesInstance) chartTriageCategoriesInstance.destroy();
+                    chartTriageCategoriesInstance = new Chart(ctx2, {
+                        type: "bar",
+                        data: {
+                            labels: ["Emergency", "OPD", "Follow-up"],
+                            datasets: [{
+                                label: "Patients Registered",
+                                data: [emergencyCount, opdCount, followupCount],
+                                backgroundColor: ["rgba(239, 68, 68, 0.75)", "rgba(59, 130, 246, 0.75)", "rgba(16, 185, 129, 0.75)"],
+                                borderColor: ["#ef4444", "#3b82f6", "#10b981"],
+                                borderWidth: 1.5,
+                                borderRadius: 6
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: { beginAtZero: true, grid: { color: "rgba(255,255,255,0.05)" } },
+                                x: { grid: { display: false } }
+                            },
+                            plugins: {
+                                legend: { display: false }
+                            }
+                        }
+                    });
+
+                    const leg2 = document.getElementById("legend-triage-categories");
+                    if (leg2) {
+                        leg2.innerHTML = `
+                            <div class="legend-chip"><span class="legend-dot" style="background:#ef4444;"></span> Emergency (${emergencyCount})</div>
+                            <div class="legend-chip"><span class="legend-dot" style="background:#3b82f6;"></span> OPD (${opdCount})</div>
+                            <div class="legend-chip"><span class="legend-dot" style="background:#10b981;"></span> Follow-up (${followupCount})</div>
+                        `;
+                    }
+                }
+
+                // Chart 3: Ward Bed Allocation (Horizontal Stacked Bar)
+                const ctx3 = document.getElementById("chart-ward-beds");
+                if (ctx3) {
+                    if (chartWardBedsInstance) chartWardBedsInstance.destroy();
+                    chartWardBedsInstance = new Chart(ctx3, {
+                        type: "bar",
+                        data: {
+                            labels: ["ICU Trauma", "Private Suites", "General Ward"],
+                            datasets: [
+                                {
+                                    label: "Occupied Beds",
+                                    data: [icuOccupied, privateOccupied, generalOccupied],
+                                    backgroundColor: "rgba(239, 68, 68, 0.8)",
+                                    borderRadius: 4
+                                },
+                                {
+                                    label: "Available Beds",
+                                    data: [icuAvailable, privateAvailable, generalAvailable],
+                                    backgroundColor: "rgba(16, 185, 129, 0.7)",
+                                    borderRadius: 4
+                                }
+                            ]
+                        },
+                        options: {
+                            indexAxis: "y",
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { stacked: true, grid: { color: "rgba(255,255,255,0.05)" } },
+                                y: { stacked: true, grid: { display: false } }
+                            },
+                            plugins: {
+                                legend: { display: false }
+                            }
+                        }
+                    });
+
+                    const leg3 = document.getElementById("legend-ward-beds");
+                    if (leg3) {
+                        leg3.innerHTML = `
+                            <div class="legend-chip"><span class="legend-dot" style="background:#ef4444;"></span> Occupied (${totalAllocatedBeds})</div>
+                            <div class="legend-chip"><span class="legend-dot" style="background:#10b981;"></span> Available (${totalBedsCount - totalAllocatedBeds})</div>
+                        `;
+                    }
+                }
+
+                // Chart 4: Financial Revenue by Billing Policy (Doughnut)
+                const ctx4 = document.getElementById("chart-billing-strategies");
+                if (ctx4) {
+                    if (chartBillingStrategiesInstance) chartBillingStrategiesInstance.destroy();
+                    chartBillingStrategiesInstance = new Chart(ctx4, {
+                        type: "doughnut",
+                        data: {
+                            labels: ["Self-Pay", "Govt Shield", "Premium", "Corporate"],
+                            datasets: [{
+                                data: [
+                                    strategyRevenue["Standard Self-Pay"],
+                                    strategyRevenue["Government Health Shield"],
+                                    strategyRevenue["Premium Private Insurance"],
+                                    strategyRevenue["Corporate Partner"]
+                                ],
+                                backgroundColor: ["#3b82f6", "#10b981", "#a855f7", "#ec4899"],
+                                borderColor: "#0f172a",
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            cutout: "60%",
+                            plugins: {
+                                legend: { display: false }
+                            }
+                        }
+                    });
+
+                    const leg4 = document.getElementById("legend-billing-strategies");
+                    if (leg4) {
+                        leg4.innerHTML = `
+                            <div class="legend-chip"><span class="legend-dot" style="background:#3b82f6;"></span> Self-Pay ($${strategyRevenue["Standard Self-Pay"]})</div>
+                            <div class="legend-chip"><span class="legend-dot" style="background:#10b981;"></span> Govt Shield ($${strategyRevenue["Government Health Shield"]})</div>
+                            <div class="legend-chip"><span class="legend-dot" style="background:#a855f7;"></span> Premium ($${strategyRevenue["Premium Private Insurance"]})</div>
+                            <div class="legend-chip"><span class="legend-dot" style="background:#ec4899;"></span> Corporate ($${strategyRevenue["Corporate Partner"]})</div>
+                        `;
+                    }
+                }
+            } catch (chartErr) {
+                console.warn("Chart rendering warning:", chartErr);
+            }
+        }
+
+        // 4. Render Doctors Status Matrix
+        const docMatrixContainer = document.getElementById("dash-doctors-matrix");
+        if (docMatrixContainer) {
+            docMatrixContainer.innerHTML = docList.map(d => {
+                const isAvail = d.available;
+                const statusLabel = isAvail ? "Available" : `Consulting (${d.patientId || "Active"})`;
+                const statusClass = isAvail ? "available" : "busy";
+                return `
+                    <div class="doc-roster-row">
+                        <div>
+                            <div class="doc-roster-name">Dr. ${d.name}</div>
+                            <div class="doc-roster-spec">${d.specialty}</div>
+                        </div>
+                        <span class="doc-roster-status ${statusClass}">${statusLabel}</span>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        // 5. Render Real-Time Hospital Event Audit Stream
+        const auditStreamContainer = document.getElementById("dash-audit-stream");
+        if (auditStreamContainer) {
+            const allLogs = [];
+            allPatients.forEach(p => {
+                (p.logs || []).forEach(log => {
+                    allLogs.push({
+                        patientName: p.name,
+                        patientId: p.id,
+                        log: log
+                    });
+                });
+            });
+
+            if (allLogs.length === 0) {
+                auditStreamContainer.innerHTML = `<div style="color:var(--text-muted); font-size:0.72rem; text-align:center; padding:1.5rem;">No hospital activity recorded yet. Register patients to start telemetry.</div>`;
+            } else {
+                // Show last 20 events in reverse chronological order
+                const recentLogs = allLogs.slice(-20).reverse();
+                auditStreamContainer.innerHTML = recentLogs.map(item => `
+                    <div class="audit-event-item">
+                        <span class="audit-event-time">[${item.patientId}]</span>
+                        <div class="audit-event-text">
+                            <strong style="color:var(--text-primary);">${item.patientName}:</strong> ${item.log}
+                        </div>
+                    </div>
+                `).join("");
+            }
+        }
+    }
+
+    // Attach Dashboard Refresh Button Listener
+    const btnRefreshAnalytics = document.getElementById("btn-refresh-analytics");
+    if (btnRefreshAnalytics) {
+        btnRefreshAnalytics.addEventListener("click", () => {
+            fetchAndRefreshUI();
+        });
+    }
+
     // Run the splash boot sequence on load
     runSplashBootSequence();
 
     // Initialize tutorial layout
     updateTutorialBanner();
 });
+

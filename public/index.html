@@ -6,12 +6,15 @@
     <title>BIOCARE // Professional EHR Design Patterns System</title>
     
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="css/styles.css?v=6">
+    <link rel="stylesheet" href="css/styles.css?v=7">
     
     <!-- Highlight.js for Code Syntax Highlighting -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/tokyo-night-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/javascript.min.js"></script>
+
+    <!-- Chart.js for High-Fidelity Healthcare Analytics Visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -60,6 +63,11 @@
             </div>
             
             <nav class="sidebar-nav flex-col">
+                <a href="#" class="nav-item" data-tab-target="dashboard" id="nav-item-dashboard">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+                    <span>Analytics Dashboard</span>
+                    <span class="nav-step" style="background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4);">Main</span>
+                </a>
                 <a href="#" class="nav-item active" data-tab-target="triage" id="nav-item-triage">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
                     <span>Triage Entrance</span>
@@ -176,6 +184,203 @@
                 <!-- Left Pane: Tabbed Views -->
                 <div class="workspace-tab-view flex-col">
                     
+                    <!-- TAB 0: MAIN DASHBOARD & ANALYTICS -->
+                    <div class="tab-panel" id="panel-dashboard">
+                        <div class="dashboard-wrapper flex-col gap-sm">
+                            
+                            <!-- Dashboard Live Toolbar -->
+                            <div class="dash-toolbar flex-row justify-between align-center">
+                                <div class="flex-row align-center gap-sm">
+                                    <span class="dash-live-badge">
+                                        <span class="pulse-dot"></span>
+                                        LIVE TELEMETRY STREAM
+                                    </span>
+                                    <span class="dash-timestamp text-muted" id="dash-last-updated">Synced just now</span>
+                                </div>
+                                <div class="flex-row gap-xs">
+                                    <button class="btn-dash-action" onclick="switchWorkspaceTab('triage')">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                                        + New Triage
+                                    </button>
+                                    <button class="btn-dash-action" onclick="switchWorkspaceTab('doctors')">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                        Physicians
+                                    </button>
+                                    <button class="btn-dash-action" onclick="switchWorkspaceTab('wards')">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 10V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4M3 10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2M3 10v6a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-6"/></svg>
+                                        Ward Beds
+                                    </button>
+                                    <button class="btn-dash-action btn-dash-primary" id="btn-refresh-analytics">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                                        Refresh
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Row 1: Executive KPI Metrics Grid -->
+                            <div class="dash-kpi-grid">
+                                <div class="dash-kpi-card kpi-blue">
+                                    <div class="kpi-header">
+                                        <span class="kpi-title">TOTAL PATIENTS</span>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                    </div>
+                                    <div class="kpi-value" id="kpi-total-patients">0</div>
+                                    <div class="kpi-footer">
+                                        <span class="kpi-subtext" id="kpi-total-breakdown">Active + Historical</span>
+                                    </div>
+                                </div>
+
+                                <div class="dash-kpi-card kpi-yellow">
+                                    <div class="kpi-header">
+                                        <span class="kpi-title">WAITING IN QUEUE</span>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                    </div>
+                                    <div class="kpi-value text-gold" id="kpi-waiting-queue">0</div>
+                                    <div class="kpi-footer">
+                                        <span class="kpi-subtext" id="kpi-emergency-count">0 Emergency priority</span>
+                                    </div>
+                                </div>
+
+                                <div class="dash-kpi-card kpi-green">
+                                    <div class="kpi-header">
+                                        <span class="kpi-title">IN CONSULTATION</span>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                                    </div>
+                                    <div class="kpi-value text-green" id="kpi-active-consultations">0</div>
+                                    <div class="kpi-footer">
+                                        <span class="kpi-subtext" id="kpi-active-docs">0 / 12 Doctors consulting</span>
+                                    </div>
+                                </div>
+
+                                <div class="dash-kpi-card kpi-purple">
+                                    <div class="kpi-header">
+                                        <span class="kpi-title">BED OCCUPANCY</span>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4M3 10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2M3 10v6a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-6"/></svg>
+                                    </div>
+                                    <div class="kpi-value text-violet" id="kpi-bed-occupancy">0%</div>
+                                    <div class="kpi-footer">
+                                        <span class="kpi-subtext" id="kpi-bed-breakdown">0 / 40 Total Beds Occupied</span>
+                                    </div>
+                                </div>
+
+                                <div class="dash-kpi-card kpi-emerald">
+                                    <div class="kpi-header">
+                                        <span class="kpi-title">REVENUE COLLECTED</span>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                                    </div>
+                                    <div class="kpi-value" style="color:#10b981;" id="kpi-revenue-total">$0</div>
+                                    <div class="kpi-footer">
+                                        <span class="kpi-subtext" id="kpi-paid-invoices">0 Invoices Settled</span>
+                                    </div>
+                                </div>
+
+                                <div class="dash-kpi-card kpi-red">
+                                    <div class="kpi-header">
+                                        <span class="kpi-title">CRITICAL SEVERITY</span>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                    </div>
+                                    <div class="kpi-value text-red" id="kpi-critical-cases">0</div>
+                                    <div class="kpi-footer">
+                                        <span class="kpi-subtext" id="kpi-avg-severity">Avg Acuity: 0.0</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Row 2: Visual Charts & Graphs Grid -->
+                            <div class="dash-charts-grid">
+                                
+                                <!-- Chart 1: Patient Lifecycle States -->
+                                <div class="dash-chart-card">
+                                    <div class="dash-chart-header flex-row justify-between align-center">
+                                        <div>
+                                            <h4>PATIENT LIFECYCLE & STATE FLOW</h4>
+                                            <p class="text-muted">Distribution across State Pattern lifecycles</p>
+                                        </div>
+                                        <span class="chart-tag" style="color:var(--brand-color);">State Pattern</span>
+                                    </div>
+                                    <div class="chart-canvas-wrapper">
+                                        <canvas id="chart-patient-states"></canvas>
+                                    </div>
+                                    <div class="chart-legend-custom" id="legend-patient-states"></div>
+                                </div>
+
+                                <!-- Chart 2: Triage Classification Breakdown -->
+                                <div class="dash-chart-card">
+                                    <div class="dash-chart-header flex-row justify-between align-center">
+                                        <div>
+                                            <h4>TRIAGE CLASSIFICATION & VOLUME</h4>
+                                            <p class="text-muted">Breakdown by Factory Method categories</p>
+                                        </div>
+                                        <span class="chart-tag" style="color:#3b82f6;">Factory Pattern</span>
+                                    </div>
+                                    <div class="chart-canvas-wrapper">
+                                        <canvas id="chart-triage-categories"></canvas>
+                                    </div>
+                                    <div class="chart-legend-custom" id="legend-triage-categories"></div>
+                                </div>
+
+                                <!-- Chart 3: Ward Bed Allocation & Capacity -->
+                                <div class="dash-chart-card">
+                                    <div class="dash-chart-header flex-row justify-between align-center">
+                                        <div>
+                                            <h4>WARD & UNIT CAPACITY UTILIZATION</h4>
+                                            <p class="text-muted">ICU, Private Suites, and General Ward beds</p>
+                                        </div>
+                                        <span class="chart-tag" style="color:#10b981;">Facade Subsystem</span>
+                                    </div>
+                                    <div class="chart-canvas-wrapper">
+                                        <canvas id="chart-ward-beds"></canvas>
+                                    </div>
+                                    <div class="chart-legend-custom" id="legend-ward-beds"></div>
+                                </div>
+
+                                <!-- Chart 4: Financial & Billing Strategy Breakdown -->
+                                <div class="dash-chart-card">
+                                    <div class="dash-chart-header flex-row justify-between align-center">
+                                        <div>
+                                            <h4>REVENUE BY BILLING POLICY</h4>
+                                            <p class="text-muted">Settled amounts by Strategy Pattern policies</p>
+                                        </div>
+                                        <span class="chart-tag" style="color:#ec4899;">Strategy Pattern</span>
+                                    </div>
+                                    <div class="chart-canvas-wrapper">
+                                        <canvas id="chart-billing-strategies"></canvas>
+                                    </div>
+                                    <div class="chart-legend-custom" id="legend-billing-strategies"></div>
+                                </div>
+
+                            </div>
+
+                            <!-- Row 3: Live Telemetry & Staff Roster Matrix -->
+                            <div class="dash-bottom-grid">
+                                
+                                <!-- On-Duty Doctor Status Matrix -->
+                                <div class="dash-info-card">
+                                    <div class="dash-info-header flex-row justify-between align-center">
+                                        <h4>🩺 CLINICAL STAFF ROSTER & PORTALS</h4>
+                                        <span class="dash-badge-sm" id="badge-doc-online">12 Active</span>
+                                    </div>
+                                    <div class="dash-doctors-scroll" id="dash-doctors-matrix">
+                                        <!-- Injected dynamically -->
+                                    </div>
+                                </div>
+
+                                <!-- Real-time Hospital Audit Feed -->
+                                <div class="dash-info-card">
+                                    <div class="dash-info-header flex-row justify-between align-center">
+                                        <h4>📜 REAL-TIME HOSPITAL EVENT AUDIT LOG</h4>
+                                        <span class="dash-badge-sm" id="badge-audit-count">Live SSE Feed</span>
+                                    </div>
+                                    <div class="dash-audit-scroll" id="dash-audit-stream">
+                                        <!-- Injected dynamically -->
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+
                     <!-- TAB 1: TRIAGE DESK -->
                     <div class="tab-panel active" id="panel-triage">
                         <div class="form-container">
@@ -482,14 +687,14 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/patterns/factory.js?v=6"></script>
-    <script src="js/patterns/singleton.js?v=6"></script>
-    <script src="js/patterns/observer.js?v=6"></script>
-    <script src="js/patterns/state.js?v=6"></script>
-    <script src="js/patterns/facade.js?v=6"></script>
-    <script src="js/patterns/chain.js?v=6"></script>
-    <script src="js/code_snippets.js?v=6"></script>
-    <script src="js/app.js?v=6"></script>
+    <script src="js/patterns/factory.js?v=7"></script>
+    <script src="js/patterns/singleton.js?v=7"></script>
+    <script src="js/patterns/observer.js?v=7"></script>
+    <script src="js/patterns/state.js?v=7"></script>
+    <script src="js/patterns/facade.js?v=7"></script>
+    <script src="js/patterns/chain.js?v=7"></script>
+    <script src="js/code_snippets.js?v=7"></script>
+    <script src="js/app.js?v=7"></script>
 
 </body>
 </html>
