@@ -17,151 +17,56 @@ The system is engineered around **Three Core Gang of Four (GoF) Design Patterns*
 
 ## 🏛️ System Architecture
 
-BioCare EHR employs a decoupled **Three-Tier Architecture**:
-* **Presentation Tier**: Responsive HTML5, CSS3, and JavaScript front-end featuring a dynamic triage intake desk, live priority queue monitor, physician call terminals, ward occupancy map, and billing ledger.
-* **Domain & Application Tier**: Express.js REST API with domain modules governed by the Factory Method, Facade, and State patterns.
-* **Persistence Tier**: Dual-mode data access engine supporting primary cloud storage via MongoDB Atlas and a local, resilient JSON data store (`database.json`) for seamless offline operation.
+BioCare EHR uses a clean **Three-Tier Architecture**:
 
 ```mermaid
-flowchart TD
-    subgraph PresentationTier ["1. Presentation Layer (Browser Client)"]
-        UI1["Triage & Registration Desk"]
-        UI2["Priority Wait Queue Monitor"]
-        UI3["Physician Terminals & Consultation"]
-        UI4["Inpatient Ward Occupancy Map"]
-        UI5["Billing & Invoice Checkout"]
-    end
-
-    subgraph APITier ["2. Application & Routing Layer (Express.js)"]
-        Routes["REST API Router\n(server/routes.js)"]
-    end
-
-    subgraph PatternTier ["3. Domain Layer: Design Patterns"]
-        subgraph CreationalPattern ["Creational: Factory Method"]
-            PF["PatientFactory\n(server/patterns/factory.js)"]
-            P1["EmergencyPatient\n(Priority 1, Min Sev >= 7)"]
-            P2["OPDPatient\n(Priority 2, Standard)"]
-            P3["FollowUpPatient\n(Priority 3, Routine)"]
-            PF --> P1
-            PF --> P2
-            PF --> P3
-        end
-
-        subgraph BehavioralPattern ["Behavioral: State Pattern"]
-            PS["«Abstract» PatientState\n(server/patterns/state.js)"]
-            S1["WaitingState\n(Queue Guard: Requires Doctor)"]
-            S2["ConsultationState\n(Clinical Escalation Rules)"]
-            S3["AdmittedState\n(Ward Bed Occupancy)"]
-            S4["DischargedState\n(Terminal Immutable Sink)"]
-            SF["StateFactory\n(Rehydration Helper)"]
-            PS --> S1
-            PS --> S2
-            PS --> S3
-            PS --> S4
-        end
-
-        subgraph StructuralPattern ["Structural: Facade Pattern"]
-            AF["AdmissionFacade\n(server/patterns/facade.js)"]
-            BM["BedManager Subsystem\n(ICU / Private / General)"]
-            DS["DoctorScheduler Subsystem\n(Physician Allocation)"]
-            BS["BillingSystem Subsystem\n(Tariffs & Payer Discounts)"]
-            AF --> BM
-            AF --> DS
-            AF --> BS
-        end
-    end
-
-    subgraph DataTier ["4. Persistence Layer (Dual-Mode Data Access)"]
-        DB["DatabaseEngine (server/db.js)"]
-        Mongo[("MongoDB Atlas\n(Mongoose ORM)")]
-        LocalJSON[("database.json\n(Offline Resilient Fallback)")]
-        DB -->|Primary Online| Mongo
-        DB -->|Offline Fallback| LocalJSON
-    end
-
-    UI1 & UI2 & UI3 & UI4 & UI5 <-->|JSON REST HTTP Requests| Routes
-    Routes --> PF
-    Routes --> AF
-    Routes --> PS
-    AF -.->|Advances Lifecycle| PS
-    PF --> DB
-    AF --> DB
-    PS --> DB
-
-    classDef client fill:#dbeafe,stroke:#1d4ed8,stroke-width:2px;
-    classDef router fill:#ede9fe,stroke:#6d28d9,stroke-width:2px;
-    classDef factory fill:#d1fae5,stroke:#047857,stroke-width:2px;
-    classDef state fill:#fef3c7,stroke:#b45309,stroke-width:2px;
-    classDef facade fill:#cffafe,stroke:#0e7490,stroke-width:2px;
-    classDef db fill:#f1f5f9,stroke:#475569,stroke-width:2px;
-
-    class UI1,UI2,UI3,UI4,UI5 client;
-    class Routes router;
-    class PF,P1,P2,P3 factory;
-    class PS,S1,S2,S3,S4,SF state;
-    class AF,BM,DS,BS facade;
-    class DB,Mongo,LocalJSON db;
+flowchart LR
+    A["🖥️ Frontend (UI)\n• Triage Desk\n• Queue Monitor\n• Doctor Console\n• Ward Map"] -->|HTTP / JSON| B["⚡ Express REST API\n(server/routes.js)"]
+    
+    B --> C["🏗️ Factory Method\n(Creates Patients)"]
+    B --> D["🔄 State Pattern\n(Lifecycle & Guards)"]
+    B --> E["🏛️ Facade Pattern\n(Beds, Doctors, Billing)"]
+    
+    C --> F[("💾 Database\nMongoDB / JSON")]
+    D --> F
+    E --> F
 ```
+
+* **1. Frontend Layer**: Clean, responsive interface for patient triage registration, live queue monitoring, physician consultations, inpatient ward beds, and checkout.
+* **2. Business Logic Layer (3 Patterns)**:
+  * **Factory Method** (`factory.js`): Instantiates the correct patient model (`Emergency`, `OPD`, `Follow-up`) and assigns triage priority.
+  * **State Pattern** (`state.js`): Governs clinical transitions (`Waiting` $\rightarrow$ `Consultation` $\rightarrow$ `Admitted` $\rightarrow$ `Discharged`) and enforces transition guards.
+  * **Facade Pattern** (`facade.js`): Unifies ward admission and checkout by coordinating beds, doctors, and billing through single calls.
+* **3. Persistence Layer**: Dual-mode storage featuring MongoDB Atlas with automated fallback to `database.json` for offline resilience.
 
 ---
 
-## 🗺️ Clinical Workflow & Pattern Sequence
+## 🗺️ Clinical Workflow
+
+A patient moves through 4 simple, automated stages across the three design patterns:
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Nurse as Nurse / Intake Staff
-    actor Doctor as Attending Doctor
-    participant Routes as Express Router
-    participant Factory as PatientFactory
-    participant State as PatientState
-    participant Facade as AdmissionFacade
-    participant DB as DatabaseEngine
+    actor Patient as 👤 Patient / Nurse
+    actor Doctor as 🩺 Doctor
+    participant System as 🏥 BioCare EHR System
 
-    Note over Nurse, Factory: 1. INTAKE & TRIAGE REGISTRATION
-    Nurse->>Routes: POST /api/patients { name, age, triageType, symptoms }
-    Routes->>Factory: PatientFactory.createPatient(type, ...)
-    Factory->>Factory: Apply triage rules (Emergency severity floor >= 7)
-    Factory-->>Routes: Return concrete Patient instance
-    Routes->>State: Initialize State = WaitingState
-    Routes->>DB: Save Patient Record to Queue
+    Note over Patient, System: 1. Registration (Factory Method)
+    Patient->>System: Register at triage desk
+    System-->>Patient: Patient created with priority & placed in WaitingState
 
-    Note over Doctor, State: 2. CONSULTATION & CLINICAL ESCALATION
-    Doctor->>Routes: POST /api/consultations/call { doctorId }
-    Routes->>State: WaitingState.next(patient, doctor)
-    Note over State: Transition Guard validates physician assignment
-    State-->>Routes: Transition to ConsultationState
-    
-    opt Clinical Escalation during Consultation
-        Doctor->>Routes: POST /api/consultations/escalate { issue }
-        Routes->>State: ConsultationState.escalate(patient, issue)
-        State-->>Routes: Evaluates severity (>= 8 -> Specialist Escalation)
-    end
+    Note over Doctor, System: 2. Consultation (State Pattern)
+    Doctor->>System: Call next patient from queue
+    System-->>Doctor: Transitions to ConsultationState (Doctor assigned)
 
-    Note over Doctor, Facade: 3. INPATIENT WARD ADMISSION
-    Doctor->>Routes: POST /api/admissions/admit { bedCategory, durationDays }
-    Routes->>Facade: AdmissionFacade.admitPatient(patient, category, days)
-    Facade->>DB: BedManager.allocateBed(category)
-    Facade->>DB: DoctorScheduler.assignDoctor(patient)
-    Facade->>DB: BillingSystem.calculateBill(...)
-    Facade->>State: ConsultationState.next(patient, 'admit')
-    State-->>Facade: Transition to AdmittedState
-    Facade->>DB: Save Inpatient Record
-    Facade-->>Routes: Return { bed, doctor, billTotal }
+    Note over Doctor, System: 3. Ward Admission (Facade Pattern)
+    Doctor->>System: Admit patient to hospital ward
+    System-->>Doctor: AdmissionFacade allocates Bed, Doctor & Bill ➔ AdmittedState
 
-    Note over Nurse, Facade: 4. CHECKOUT & DISCHARGE
-    Nurse->>Routes: POST /api/admissions/discharge { insurancePlan }
-    Routes->>Facade: AdmissionFacade.dischargePatient(patient, plan)
-    Facade->>DB: BedManager.releaseBed(bedNumber)
-    Facade->>DB: DoctorScheduler.freeDoctor(docId)
-    Facade->>DB: BillingSystem.settleInvoice(bill, plan)
-    Facade->>State: AdmittedState.next(patient, 'discharge')
-    State-->>Facade: Transition to DischargedState
-    Facade->>DB: Save Settled Record (Status: Paid)
-    Facade-->>Routes: Return Settled Invoice
-
-    Note over State: TERMINAL GUARD ENFORCED
-    Note over State: Subsequent transition calls are blocked (Immutable record)
+    Note over Patient, System: 4. Checkout & Discharge (Facade & State)
+    Patient->>System: Settle invoice & checkout
+    System-->>Patient: AdmissionFacade frees Bed, frees Doctor & settles Bill ➔ DischargedState
 ```
 
 ---
