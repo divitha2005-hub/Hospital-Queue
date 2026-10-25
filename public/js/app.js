@@ -1,7 +1,7 @@
 /**
  * Main application coordinator (Full-Stack EHR Edition).
  * Connects to the Express REST API endpoints and subscribes to
- * Server-Sent Events (SSE) to implement the Observer pattern across the network.
+ * Server-Sent Events (SSE) for real-time live synchronization.
  */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -129,7 +129,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    function calculateTriageStrategy() {
+    function calculateTriageRecommendation() {
         if (selectedSymptoms.length === 0) {
             return { category: null, severity: null, desc: "Select symptoms to initiate clinical decision support." };
         }
@@ -175,7 +175,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!hud || !categoryVal || !severityVal || !descVal) return;
 
-        const rec = calculateTriageStrategy();
+        const rec = calculateTriageRecommendation();
         if (!rec.category) {
             hud.style.display = "none";
             return;
@@ -218,7 +218,7 @@ document.addEventListener("DOMContentLoaded", () => {
         },
         queue: {
             title: "ACTIVE TRIAGE QUEUE MONITOR",
-            subtitle: "Priority sorted list managed by TriageDesk (Singleton). Observers sync displays."
+            subtitle: "Priority-sorted queue managing patient lifecycle in WaitingState."
         },
         doctors: {
             title: "PHYSICIAN ALLOCATION TERMINALS",
@@ -284,18 +284,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // -------------------------------------------------------------
-    // 3. Server-Sent Events (Full-Stack Observer Pattern)
+    // 3. Server-Sent Events (Real-time Live Sync)
     // -------------------------------------------------------------
-    function setupSSEObserver() {
+    function setupLiveSSE() {
         const eventSource = new EventSource("/api/events");
         
         eventSource.addEventListener("queueUpdated", (e) => {
             const data = JSON.parse(e.data);
-            logPatternExecution("Observer", "Server-Sent Events: Received broadcast from database Subject.");
-            
-            // Highlight Observer tab briefly
-            highlightPatternTab("observer");
-            
+                        
             // Reload all EHR data in real-time
             fetchAndRefreshUI();
         });
@@ -307,7 +303,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Initial load
     fetchAndRefreshUI().then(() => {
-        setupSSEObserver();
+        setupLiveSSE();
         initSymptomWidget();
         initConsultationTab();
         initSplitterResize();
@@ -336,11 +332,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Auto-sync Inspector focused pattern tab & trigger specific tab re-renders
         if (tabId === "dashboard") {
-            selectInspectorTab("observer");
+            selectInspectorTab("state");
             updateDashboardAnalytics();
         }
         else if (tabId === "triage") selectInspectorTab("factory");
-        else if (tabId === "queue") selectInspectorTab("singleton");
+        else if (tabId === "queue") selectInspectorTab("state");
         else if (tabId === "doctors") selectInspectorTab("state");
         else if (tabId === "consultation") selectInspectorTab("state");
         else if (tabId === "wards") selectInspectorTab("facade");
@@ -391,7 +387,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const recommendation = calculateTriageStrategy();
+        const recommendation = calculateTriageRecommendation();
         if (!recommendation.category) {
             alert("Please select at least one presenting symptom.");
             return;
@@ -420,8 +416,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const patient = await res.json();
             
             logPatternExecution("Factory", `PatientFactory instantiated concrete subclass for "${patient.name}" on backend.`);
-            logPatternExecution("Singleton", `DatabaseEngine Singleton serialized file write for "${patient.id}".`);
-            highlightPatternTab("singleton");
+                        highlightPatternTab("state");
         } catch (err) {
             console.error("Triaging error:", err);
         }
@@ -473,8 +468,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (logsBody) {
                 logsBody.innerHTML = `<div class="console-line"><span class="timestamp">[System Info]</span> System reset completed. Queue and Beds cleared.</div>`;
             }
-            logPatternExecution("Singleton", "TriageDesk DatabaseEngine Singleton reset.");
-            
+                        
             // Clean modal
             modal.classList.remove("active");
             if (ecgAnimationId) cancelAnimationFrame(ecgAnimationId);
@@ -576,7 +570,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <label>Triage Escalation Request</label>
                     <div class="flex-col gap-xs">
                         <input type="text" id="escalation-issue" placeholder="Describe symptoms escalation..." style="width: 100%;">
-                        <button class="btn-hud-primary" onclick="triggerEscalation()" style="width: 100%;">Escalate Urgency (Chain)</button>
+                        <button class="btn-hud-primary" onclick="triggerEscalation()" style="width: 100%;">Escalate Urgency (State)</button>
                     </div>
                 </div>
             `;
@@ -599,7 +593,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <label>Severity Escalation</label>
                     <div class="flex-col gap-xs">
                         <input type="text" id="escalation-issue" placeholder="Describe critical symptom development..." style="width: 100%;">
-                        <button class="btn-hud btn-neon-red" onclick="triggerEscalation()" style="width: 100%; border-color: var(--red); color: var(--red);">Escalate Physician Chain</button>
+                        <button class="btn-hud btn-neon-red" onclick="triggerEscalation()" style="width: 100%; border-color: var(--red); color: var(--red);">Escalate Clinical Urgency</button>
                     </div>
                 </div>
             `;
@@ -767,14 +761,14 @@ document.addEventListener("DOMContentLoaded", () => {
         draw();
     }
 
-    // Trigger Escalation (Chain of Responsibility API call)
+    // Trigger Escalation (State Pattern API call)
     window.triggerEscalation = async function() {
         const issue = document.getElementById("escalation-issue").value.trim() || "Clinical urgency escalation requested.";
         const patient = localPatients.find(p => p.id === activeModalPatientId) || localHistory.find(p => p.id === activeModalPatientId);
         
         if (!patient) return;
 
-        highlightPatternTab("chain");
+        highlightPatternTab("state");
         try {
             const res = await fetch("/api/consultations/escalate", {
                 method: "POST",
@@ -783,7 +777,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             const data = await res.json();
             
-            logPatternExecution("Chain", `Chain of Responsibility resolved escalation: ${data.resolution}`);
+            logPatternExecution("State", `State clinical escalation resolved: ${data.resolution}`);
             
             // Refresh modal layout details
             showPatientDetails(patient.id);
@@ -851,66 +845,51 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // -------------------------------------------------------------
-    // Strategy Pattern (Behavioral) - Client-side Billing Policy
+    // AdmissionFacade Billing Subsystem Tariff Calculation
     // -------------------------------------------------------------
-    class BillingStrategy {
-        calculateTotal(baseFee, bedCharge, pharmacyCharge) { return baseFee + bedCharge + pharmacyCharge; }
-        getPolicyDescription() { return "Standard Patient Self-Pay Policy"; }
-        getDiscountBreakdown(baseFee, bedCharge, pharmacyCharge) { return { discountAmount: 0, desc: "None" }; }
-    }
-
-    class GovernmentInsuredStrategy extends BillingStrategy {
-        calculateTotal(baseFee, bedCharge, pharmacyCharge) {
+    function calculateInsuranceTariff(planKey, baseFee, bedCharge, pharmacyCharge) {
+        if (planKey === "govt") {
             const finalBed = bedCharge * 0.3;
             const finalPharm = pharmacyCharge * 0.7;
-            return Math.round(baseFee + finalBed + finalPharm);
-        }
-        getPolicyDescription() { return "Government Shield (70% Bed, 30% RX)"; }
-        getDiscountBreakdown(baseFee, bedCharge, pharmacyCharge) {
             const disc = Math.round((bedCharge * 0.7) + (pharmacyCharge * 0.3));
-            return { discountAmount: disc, desc: "Govt Health Shield Policy" };
-        }
-    }
-
-    class PremiumInsuredStrategy extends BillingStrategy {
-        calculateTotal(baseFee, bedCharge, pharmacyCharge) {
+            return {
+                finalTotal: Math.round(baseFee + finalBed + finalPharm),
+                discountAmount: disc,
+                desc: "Govt Health Shield Policy (70% Bed, 30% RX)"
+            };
+        } else if (planKey === "premium") {
             const finalBase = baseFee * 0.5;
             const finalBed = bedCharge * 0.6;
-            return Math.round(finalBase + finalBed + pharmacyCharge);
-        }
-        getPolicyDescription() { return "Premium Private (50% Consult, 40% Bed)"; }
-        getDiscountBreakdown(baseFee, bedCharge, pharmacyCharge) {
             const disc = Math.round((baseFee * 0.5) + (bedCharge * 0.4));
-            return { discountAmount: disc, desc: "Premium Insured Policy" };
-        }
-    }
-
-    class CorporateBillingStrategy extends BillingStrategy {
-        calculateTotal(baseFee, bedCharge, pharmacyCharge) {
-            const sum = baseFee + bedCharge + pharmacyCharge;
-            return Math.round(sum * 0.85);
-        }
-        getPolicyDescription() { return "Corporate Partner (Flat 15% Total)"; }
-        getDiscountBreakdown(baseFee, bedCharge, pharmacyCharge) {
+            return {
+                finalTotal: Math.round(finalBase + finalBed + pharmacyCharge),
+                discountAmount: disc,
+                desc: "Premium Insured Policy (50% Consult, 40% Bed)"
+            };
+        } else if (planKey === "corporate") {
             const sum = baseFee + bedCharge + pharmacyCharge;
             const disc = Math.round(sum * 0.15);
-            return { discountAmount: disc, desc: "Corporate Partner Shield" };
+            return {
+                finalTotal: Math.round(sum * 0.85),
+                discountAmount: disc,
+                desc: "Corporate Partner Shield (Flat 15% Total)"
+            };
+        } else {
+            return {
+                finalTotal: baseFee + bedCharge + pharmacyCharge,
+                discountAmount: 0,
+                desc: "Standard Patient Self-Pay Policy"
+            };
         }
     }
 
-    let activeBillingStrategyKey = "none";
+    let activeBillingPlanKey = "none";
 
-    window.applyBillingStrategy = function() {
-        const select = document.getElementById("billing-strategy-select");
+    window.applyBillingPlan = function() {
+        const select = document.getElementById("billing-plan-select");
         if (!select) return;
 
-        activeBillingStrategyKey = select.value;
-
-        let strategy;
-        if (activeBillingStrategyKey === "govt") strategy = new GovernmentInsuredStrategy();
-        else if (activeBillingStrategyKey === "premium") strategy = new PremiumInsuredStrategy();
-        else if (activeBillingStrategyKey === "corporate") strategy = new CorporateBillingStrategy();
-        else strategy = new BillingStrategy();
+        activeBillingPlanKey = select.value;
 
         const patient = localHistory.find(p => p.id === activeCheckoutPatientId);
         if (!patient) return;
@@ -920,11 +899,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const bedCharge = bill ? bill.bedCharge : 0;
         const pharmacyCharge = bill ? bill.pharmacyCharge : 0;
 
-        const finalTotal = strategy.calculateTotal(baseFee, bedCharge, pharmacyCharge);
-        const { discountAmount, desc } = strategy.getDiscountBreakdown(baseFee, bedCharge, pharmacyCharge);
+        const { finalTotal, discountAmount, desc } = calculateInsuranceTariff(activeBillingPlanKey, baseFee, bedCharge, pharmacyCharge);
 
         const totalEl = document.getElementById("invoice-grand-total");
-        if (totalEl) totalEl.innerText = `$${finalTotal}`;
+        if (totalEl) totalEl.innerText = `${finalTotal}`;
 
         const discContainer = document.getElementById("invoice-discount-row");
         if (discContainer) {
@@ -932,7 +910,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 discContainer.innerHTML = `
                     <div class="flex-row justify-between" style="color: #34d399; font-size: 0.65rem; margin-top:0.25rem; font-weight:700;">
                         <span>Discount (${desc})</span>
-                        <span>-$${discountAmount}</span>
+                        <span>-${discountAmount}</span>
                     </div>
                 `;
             } else {
@@ -940,7 +918,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
         
-        logPatternExecution("Strategy", `Selected policy: ${strategy.getPolicyDescription()}. Net charge recalculated.`);
+        logPatternExecution("Facade", `AdmissionFacade billing subsystem updated: ${desc}.`);
+        highlightPatternTab("facade");
     };
 
     function renderCheckoutReceipt() {
@@ -987,8 +966,8 @@ document.addEventListener("DOMContentLoaded", () => {
         container.style.background = "rgba(15, 23, 42, 0.4)";
         container.style.textAlign = "left";
 
-        // Reset strategy key to standard on checkout selection
-        activeBillingStrategyKey = "none";
+        // Reset plan key to standard on checkout selection
+        activeBillingPlanKey = "none";
 
         container.innerHTML = `
             <div class="invoice-container flex-col gap-xs" style="font-family:'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--text-secondary);">
@@ -1030,14 +1009,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="flex-col gap-xxs" style="padding-left: 0.5rem; margin-top: 0.25rem; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 0.25rem;">
                         ${rxList}
                     </div>
-                    <!-- Real-time Strategy Discount Line -->
+                    <!-- Real-time Insurance Discount Line -->
                     <div id="invoice-discount-row"></div>
                 </div>
 
-                <!-- Select Insurance Plan / Strategy -->
+                <!-- Select Insurance Plan -->
                 <div class="flex-col gap-xxs" style="margin-bottom: 0.75rem; background: rgba(0, 0, 0, 0.25); padding: 0.5rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.03);">
-                    <label style="font-size: 0.58rem; color: var(--brand-color); font-weight: 700; letter-spacing:0.3px; margin-bottom:0.25rem;">STRATEGY: CHOOSE INSURANCE / BILLING DISCOUNT POLICY</label>
-                    <select id="billing-strategy-select" onchange="applyBillingStrategy()" style="width: 100%; font-size: 0.65rem; padding: 0.3rem; background: #070a13; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; color: #fff; font-family:'JetBrains Mono', monospace; cursor:pointer;">
+                    <label style="font-size: 0.58rem; color: var(--brand-color); font-weight: 700; letter-spacing:0.3px; margin-bottom:0.25rem;">CHOOSE INSURANCE / BILLING DISCOUNT PLAN</label>
+                    <select id="billing-plan-select" onchange="applyBillingPlan()" style="width: 100%; font-size: 0.65rem; padding: 0.3rem; background: #070a13; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; color: #fff; font-family:'JetBrains Mono', monospace; cursor:pointer;">
                         <option value="none">Standard Policy (No Insurance Discount)</option>
                         <option value="govt">Government Shield (70% Bed, 30% Pharmacy Disc)</option>
                         <option value="premium">Premium Private Care (50% Consult, 40% Bed Disc)</option>
@@ -1083,7 +1062,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div style="width: 42px; height: 42px; border-radius: 50%; background: rgba(16,185,129,0.1); border: 2px solid var(--green); display: flex; align-items: center; justify-content: center; color: var(--green); font-size: 1.3rem;">✓</div>
                 <div style="font-family:'JetBrains Mono', monospace; font-size:0.75rem;">
                     <strong style="color:var(--green); font-size:0.85rem;">INVOICE PAID SUCCESSFULLY</strong><br>
-                    <span style="color:var(--text-muted); font-size:0.65rem;">FACADE & STRATEGY TRANSACTION COMPLETE</span>
+                    <span style="color:var(--text-muted); font-size:0.65rem;">FACADE TRANSACTION COMPLETE</span>
                 </div>
                 
                 <div class="flex-col gap-xxs" style="background: rgba(0,0,0,0.15); padding: 0.5rem 1rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.02); font-family:'JetBrains Mono', monospace; font-size: 0.72rem; text-align: left; min-width: 240px; margin: 0.25rem 0;">
@@ -1111,16 +1090,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const patient = localHistory.find(p => p.id === patientId);
         if (!patient) return;
 
-        // Read selected billing strategy from UI dropdown
-        const select = document.getElementById("billing-strategy-select");
-        const strategy = select ? select.value : "none";
+        // Read selected insurance plan from UI dropdown
+        const select = document.getElementById("billing-plan-select");
+        const plan = select ? select.value : "none";
 
         highlightPatternTab("facade");
         try {
             const res = await fetch("/api/admissions/discharge", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ patientId: patient.id, strategy })
+                body: JSON.stringify({ patientId: patient.id, plan })
             });
             const invoice = await res.json();
 
@@ -1179,13 +1158,13 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         },
         2: {
-            title: "Triage Sorting & Notifications (Singleton & Observer)",
-            pattern: "singleton",
+            title: "Triage Priority Queue (State Pattern)",
+            pattern: "state",
             tabId: "queue",
-            body: "Triage sorting is managed by the **TriageDesk (Singleton)**. Registering patients auto-sorts them by category priority, then severity. Concurrently, the **Observer Pattern** updates all displays.",
+            body: "Triage sorting manages patient waiting order by category priority and severity score. Patients initialize in the **WaitingState** before being pulled for doctor consultation.",
             runBtnText: "⚡ RE-TRIAGE & SORT QUEUE",
             action: () => {
-                highlightPatternTab("singleton");
+                highlightPatternTab("state");
                 if (localPatients.length < 2) {
                     registerAndTriage("Emergency Case", 50, "Emergency", 10, "Acute chest pains");
                     registerAndTriage("Routine OPD", 25, "OPD", 3, "Common cold");
@@ -1212,10 +1191,10 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         },
         4: {
-            title: "Escalate Urgency (Chain of Responsibility)",
-            pattern: "chain",
+            title: "Clinical Urgency Escalation (State Pattern)",
+            pattern: "state",
             tabId: "consultation",
-            body: "During the patient's consultation, symptoms worsen. Click below to escalate the case. The request flows through the **Chain of Responsibility** (Nurse ➔ Junior Doctor ➔ Specialist) depending on severity.",
+            body: "During consultation, patient vitals worsen. The **State Pattern** handles clinical urgency evaluation and updates patient severity score dynamically.",
             runBtnText: "🚨 ESCALATE ACTIVE CASE",
             action: () => {
                 const activePatient = localHistory.find(p => p.stateName === "Consultation");
@@ -1558,7 +1537,7 @@ document.addEventListener("DOMContentLoaded", () => {
         factory: {
             title: "Factory Method Pattern (Creational)",
             filepath: "server/patterns/factory.js",
-            text: "Decouples patient object instantiation from the Express route controller. A model class request payload routes to `PatientFactory.createPatient()`, returning specialized concrete subclass instances (`EmergencyPatient`, `OPDPatient`, `FollowUpPatient`) containing pre-configured default billing parameters and severity score floors.",
+            text: "Decouples patient object instantiation from Express route controllers. Triage requests invoke <code>PatientFactory.createPatient()</code>, returning specialized concrete subclass instances (<code>EmergencyPatient</code>, <code>OPDPatient</code>, <code>FollowUpPatient</code>) with category-specific priorities, base fees, and severity thresholds.",
             uml: `
 <div class="flex-center">
   <div class="uml-box">
@@ -1586,58 +1565,32 @@ document.addEventListener("DOMContentLoaded", () => {
 </div>
             `
         },
-        singleton: {
-            title: "Singleton Pattern (Creational)",
-            filepath: "server/db.js",
-            text: "Maintains a single authoritative entry point to the persistent data file (`database.json`). The `DatabaseEngine` class exposes a static `getInstance()` method. This guarantees that file streams, array sorts, and concurrency read/write locks are managed by a single instance, preventing data corruption or race conditions in patient records.",
+        facade: {
+            title: "Facade Pattern (Structural)",
+            filepath: "server/patterns/facade.js",
+            text: "Coordinates disparate hospital subsystems behind a unified service interface. The <code>AdmissionFacade</code> class orchestrates <code>BedManager</code> (bed reservations), <code>DoctorScheduler</code> (supervising doctor assignment), and <code>BillingSystem</code> (fee calculation and insurance discounts) in a single atomic transaction.",
             uml: `
-<div class="flex-center">
-  <div class="uml-box highlighted" style="min-width:180px;">
-    <div class="uml-title">DatabaseEngine (Singleton)</div>
-    <div class="uml-field">- instance: DatabaseEngine</div>
-    <div class="uml-field">- dbPath: String</div>
-    <div class="uml-field">+ getInstance(): DatabaseEngine</div>
-    <div class="uml-field">+ readRaw()</div>
-    <div class="uml-field">+ writeRaw()</div>
-  </div>
-</div>
-            `
-        },
-        observer: {
-            title: "Observer Pattern (Full-Stack Network SSE)",
-            filepath: "server/routes.js (line 33)",
-            text: "Maintains real-time synchronization between the server's database state and multiple open browser displays. The backend `/api/events` endpoint acts as the network Subject. When updates occur (e.g. triaging a patient, consulting, admitting), the server broadcasts data to all browser Observers listening to the EventSource stream.",
-            uml: `
-<div class="flex-center">
-  <div class="uml-box" style="min-width:160px;">
-    <div class="uml-title">Backend Event Stream</div>
-    <div class="uml-field">- sseClients: list</div>
-    <div class="uml-field">+ broadcastEvent()</div>
-  </div>
-</div>
-<div class="flex-center">
-  <div class="uml-arrow" style="color:var(--green);">▼ pushes Server-Sent Events (Observer)</div>
-</div>
 <div class="flex-center">
   <div class="uml-box highlighted" style="min-width:160px;">
-    <div class="uml-title">EventSource (Client)</div>
-    <div class="uml-field">+ addEventListener()</div>
+    <div class="uml-title">AdmissionFacade</div>
+    <div class="uml-field">+ admitPatient(patient, bed, days)</div>
+    <div class="uml-field">+ dischargePatient(patient, plan)</div>
   </div>
 </div>
 <div class="flex-center">
-  <div class="uml-arrow" style="color:var(--text-muted);">▼ updates</div>
+  <div class="uml-arrow" style="color:var(--violet);">▼ coordinates subsystems</div>
 </div>
-<div class="flex-center" style="gap: 0.35rem;">
-  <div class="uml-box" style="font-size:0.55rem; min-width:85px;">Queue Display</div>
-  <div class="uml-box" style="font-size:0.55rem; min-width:85px;">Doctor Console</div>
-  <div class="uml-box" style="font-size:0.55rem; min-width:85px;">Wards Bed Map</div>
+<div class="flex-center" style="gap: 0.3rem;">
+  <div class="uml-box" style="font-size:0.55rem; min-width:85px;">BedManager</div>
+  <div class="uml-box" style="font-size:0.55rem; min-width:85px;">DoctorScheduler</div>
+  <div class="uml-box" style="font-size:0.55rem; min-width:85px;">BillingSystem</div>
 </div>
             `
         },
         state: {
             title: "State Pattern (Behavioral)",
             filepath: "server/patterns/state.js",
-            text: "Encapsulates state-specific validation rules on the server. Before modifying database records, the patient lifecycle is model-wrapped using concrete classes (`WaitingState`, `ConsultationState`, `AdmittedState`). Validations ensure transitions are consistent (e.g. preventing direct discharge from Waiting state without a doctor's consultation).",
+            text: "Encapsulates state-specific clinical lifecycle rules and transition guards. A patient moves through <code>WaitingState</code> ➔ <code>ConsultationState</code> ➔ <code>AdmittedState</code> ➔ <code>DischargedState</code>. The State pattern guards against illegal transitions (e.g. discharging directly from Waiting without consultation).",
             uml: `
 <div class="flex-center">
   <div class="uml-box" style="min-width:140px;">
@@ -1653,7 +1606,7 @@ document.addEventListener("DOMContentLoaded", () => {
   <div class="uml-box highlighted" style="min-width:140px;">
     <div class="uml-title">PatientState</div>
     <div class="uml-field">+ next(patient, option)</div>
-    <div class="uml-field">+ escalate(patient, ...)</div>
+    <div class="uml-field">+ escalate(patient, issue)</div>
   </div>
 </div>
 <div class="flow-chart" style="margin-top:0.4rem; gap: 0.2rem;">
@@ -1662,74 +1615,6 @@ document.addEventListener("DOMContentLoaded", () => {
   <div class="uml-box" style="font-size:0.55rem; min-width:70px;">Consult</div>
   <div class="uml-arrow">➔</div>
   <div class="uml-box" style="font-size:0.55rem; min-width:70px;">Admit / Disc</div>
-</div>
-            `
-        },
-        facade: {
-            title: "Facade Pattern (Structural)",
-            filepath: "server/patterns/facade.js",
-            text: "Simplifies backend routing by hiding complex multi-table interactions behind a unified service wrapper. The `AdmissionFacade` class orchestrates the `BedManager` (reserving bed spots), `DoctorScheduler` (scheduling supervising doctors), and `BillingSystem` (calculating charges) subsystems dynamically.",
-            uml: `
-<div class="flex-center">
-  <div class="uml-box highlighted" style="min-width:160px;">
-    <div class="uml-title">AdmissionFacade</div>
-    <div class="uml-field">+ admitPatient(patient)</div>
-    <div class="uml-field">+ dischargePatient(patient)</div>
-  </div>
-</div>
-<div class="flex-center">
-  <div class="uml-arrow" style="color:var(--violet);">▼ coordinates</div>
-</div>
-<div class="flex-center" style="gap: 0.3rem;">
-  <div class="uml-box" style="font-size:0.55rem; min-width:85px;">BedManager</div>
-  <div class="uml-box" style="font-size:0.55rem; min-width:85px;">DoctorSched</div>
-  <div class="uml-box" style="font-size:0.55rem; min-width:85px;">BillingSystem</div>
-</div>
-            `
-        },
-        chain: {
-            title: "Chain of Responsibility Pattern (Behavioral)",
-            filepath: "server/patterns/chain.js",
-            text: "Decouples triage warning senders from clinical receivers. Severity-level escalations propagate along a chain of validation handlers. If minor (severity <= 3), a `Nurse` handler resolves the issue; if moderate, the `JuniorDoctor` resolves it; if critical, it escalates automatically to the `Specialist` handler.",
-            uml: `
-<div class="flex-center">
-  <div class="uml-box" style="min-width:150px;">
-    <div class="uml-title">EscalationHandler</div>
-    <div class="uml-field">- next: Handler</div>
-    <div class="uml-field">+ handleRequest(p, issue)</div>
-  </div>
-</div>
-<div class="flex-center">
-  <div class="uml-arrow" style="color:var(--blue);">▼ propagates</div>
-</div>
-<div class="flex-center" style="flex-direction: column; gap: 0.25rem;">
-  <div class="uml-box" style="font-size:0.55rem; min-width:160px;">Nurse (severity <= 3)</div>
-  <div class="uml-arrow" style="font-size:0.6rem; padding:0;">▼ next</div>
-  <div class="uml-box" style="font-size:0.55rem; min-width:160px;">Junior Doctor (severity <= 7)</div>
-  <div class="uml-arrow" style="font-size:0.6rem; padding:0;">▼ next</div>
-  <div class="uml-box highlighted" style="font-size:0.55rem; min-width:160px;">Specialist (severity > 7)</div>
-</div>
-            `
-        },
-        strategy: {
-            title: "Strategy Pattern (Behavioral)",
-            filepath: "server/patterns/strategy.js",
-            text: "Encapsulates interchangeable billing discount algorithms to support runtime plan changes. The `BillingStrategy` interface specifies `calculateTotal()`. At checkout (Step 6), selecting an insurance provider dynamically loads the corresponding strategy (`GovernmentInsuredStrategy`, `PremiumInsuredStrategy`, or `CorporateBillingStrategy`) to recalculate the invoice totals dynamically on both client and server.",
-            uml: `
-<div class="flex-center">
-  <div class="uml-box highlighted" style="min-width:160px;">
-    <div class="uml-title">BillingStrategy</div>
-    <div class="uml-field">+ calculateTotal(base, bed, rx)</div>
-    <div class="uml-field">+ getPolicyDescription()</div>
-  </div>
-</div>
-<div class="flex-center">
-  <div class="uml-arrow" style="color:var(--brand-color);">▼ implemented by</div>
-</div>
-<div class="flex-center" style="gap: 0.3rem;">
-  <div class="uml-box" style="font-size:0.55rem; min-width:85px;">StandardStrategy</div>
-  <div class="uml-box" style="font-size:0.55rem; min-width:85px;">GovtInsured</div>
-  <div class="uml-box" style="font-size:0.55rem; min-width:85px;">PremiumInsured</div>
 </div>
             `
         }
@@ -1872,7 +1757,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
-        // Attach close listeners for Chain of Responsibility alert overlay
+        // Attach close listeners for Clinical Escalation alert overlay
         const overlay = document.getElementById("escalation-alert-overlay");
         const closeX = document.getElementById("close-esc-alert");
         const closeBtn = document.getElementById("btn-close-esc-alert");
@@ -2005,7 +1890,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         </div>
 
                         <div class="form-group">
-                            <label style="font-size: 0.68rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.25rem;">SEVERITY ESCALATION (CHAIN OF RESPONSIBILITY)</label>
+                            <label style="font-size: 0.68rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.25rem;">SEVERITY ESCALATION (CLINICAL WORKFLOW)</label>
                             <div class="medication-input-row">
                                 <input type="text" id="consult-escalation-input" placeholder="Describe critical symptom development..." style="font-family: 'JetBrains Mono', monospace;">
                                 <button class="btn-hud btn-neon-red" id="btn-consult-escalate" type="button" style="padding:0.4rem 0.8rem; font-size:0.7rem;">Escalate Case</button>
@@ -2253,7 +2138,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function escalatePatientFromConsult(patientId, issue) {
-        highlightPatternTab("chain");
+        highlightPatternTab("state");
         try {
             const res = await fetch("/api/consultations/escalate", {
                 method: "POST",
@@ -2262,7 +2147,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             const result = await res.json();
             
-            logPatternExecution("Chain", `Chain of Responsibility routed clinical escalation: ${result.resolution}`);
+            logPatternExecution("State", `State clinical escalation resolved: ${result.resolution}`);
             
             const idx = localHistory.findIndex(p => p.id === patientId);
             if (idx !== -1) {
@@ -2270,14 +2155,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 renderConsultationWorkspace();
             }
 
-            // Show visual routing chain alert overlay
-            showChainOfResponsibilityAlert(result.patient, issue, result.resolution);
+            // Show visual clinical escalation alert overlay
+            showClinicalEscalationAlert(result.patient, issue, result.resolution);
         } catch (err) {
             console.error("Escalation error:", err);
         }
     }
 
-    function showChainOfResponsibilityAlert(patient, issue, resolution) {
+    function showClinicalEscalationAlert(patient, issue, resolution) {
         const overlay = document.getElementById("escalation-alert-overlay");
         if (!overlay) return;
 
@@ -2295,9 +2180,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const statusSpec = document.getElementById("status-specialist");
 
         // Clear previous classes
-        nodeNurse.className = "chain-node";
-        nodeJunior.className = "chain-node";
-        nodeSpec.className = "chain-node";
+        nodeNurse.className = "flow-node";
+        nodeJunior.className = "flow-node";
+        nodeSpec.className = "flow-node";
 
         if (score <= 3) {
             nodeNurse.classList.add("active");
@@ -2384,10 +2269,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const bootSteps = [
             { pct: 15, msg: "Establishing secure database connection..." },
-            { pct: 35, msg: "Verifying DatabaseEngine Singleton instance..." },
+            { pct: 35, msg: "Initializing DatabaseEngine data service..." },
             { pct: 55, msg: "Compiling PatientFactory Triaging Subclasses..." },
             { pct: 75, msg: "Mounting State Machine validation checks..." },
-            { pct: 90, msg: "Connecting Observer Network SSE streams..." },
+            { pct: 90, msg: "Connecting real-time event streams..." },
             { pct: 100, msg: "System integrity verified. Welcome, Chief Medical Officer." }
         ];
 
@@ -2465,7 +2350,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Revenue calculations
         let totalRevenue = 0;
         let settledInvoices = 0;
-        const strategyRevenue = {
+        const planRevenue = {
             "Standard Self-Pay": 0,
             "Government Health Shield": 0,
             "Premium Private Insurance": 0,
@@ -2479,16 +2364,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     settledInvoices++;
                 }
 
-                // Attribute strategy from logs
+                // Attribute insurance plan from logs
                 const logsStr = (p.logs || []).join(" ").toLowerCase();
                 if (logsStr.includes("government") || logsStr.includes("govt")) {
-                    strategyRevenue["Government Health Shield"] += p.billingSummary.total;
+                    planRevenue["Government Health Shield"] += p.billingSummary.total;
                 } else if (logsStr.includes("premium")) {
-                    strategyRevenue["Premium Private Insurance"] += p.billingSummary.total;
+                    planRevenue["Premium Private Insurance"] += p.billingSummary.total;
                 } else if (logsStr.includes("corporate")) {
-                    strategyRevenue["Corporate Partner"] += p.billingSummary.total;
+                    planRevenue["Corporate Partner"] += p.billingSummary.total;
                 } else {
-                    strategyRevenue["Standard Self-Pay"] += p.billingSummary.total;
+                    planRevenue["Standard Self-Pay"] += p.billingSummary.total;
                 }
             }
         });
@@ -2678,10 +2563,10 @@ document.addEventListener("DOMContentLoaded", () => {
                             labels: ["Self-Pay", "Govt Shield", "Premium", "Corporate"],
                             datasets: [{
                                 data: [
-                                    strategyRevenue["Standard Self-Pay"],
-                                    strategyRevenue["Government Health Shield"],
-                                    strategyRevenue["Premium Private Insurance"],
-                                    strategyRevenue["Corporate Partner"]
+                                    planRevenue["Standard Self-Pay"],
+                                    planRevenue["Government Health Shield"],
+                                    planRevenue["Premium Private Insurance"],
+                                    planRevenue["Corporate Partner"]
                                 ],
                                 backgroundColor: ["#3b82f6", "#10b981", "#a855f7", "#ec4899"],
                                 borderColor: "#0f172a",
@@ -2701,10 +2586,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     const leg4 = document.getElementById("legend-billing-strategies");
                     if (leg4) {
                         leg4.innerHTML = `
-                            <div class="legend-chip"><span class="legend-dot" style="background:#3b82f6;"></span> Self-Pay ($${strategyRevenue["Standard Self-Pay"]})</div>
-                            <div class="legend-chip"><span class="legend-dot" style="background:#10b981;"></span> Govt Shield ($${strategyRevenue["Government Health Shield"]})</div>
-                            <div class="legend-chip"><span class="legend-dot" style="background:#a855f7;"></span> Premium ($${strategyRevenue["Premium Private Insurance"]})</div>
-                            <div class="legend-chip"><span class="legend-dot" style="background:#ec4899;"></span> Corporate ($${strategyRevenue["Corporate Partner"]})</div>
+                            <div class="legend-chip"><span class="legend-dot" style="background:#3b82f6;"></span> Self-Pay ($${planRevenue["Standard Self-Pay"]})</div>
+                            <div class="legend-chip"><span class="legend-dot" style="background:#10b981;"></span> Govt Shield ($${planRevenue["Government Health Shield"]})</div>
+                            <div class="legend-chip"><span class="legend-dot" style="background:#a855f7;"></span> Premium ($${planRevenue["Premium Private Insurance"]})</div>
+                            <div class="legend-chip"><span class="legend-dot" style="background:#ec4899;"></span> Corporate ($${planRevenue["Corporate Partner"]})</div>
                         `;
                     }
                 }

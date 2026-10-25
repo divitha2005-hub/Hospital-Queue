@@ -1,199 +1,214 @@
 /**
- * Automated test script to verify design patterns in the Node.js backend.
+ * Automated test script to verify the 3 Core Justifiable Design Patterns:
+ * 1. Factory Method Pattern (Creational)
+ * 2. Facade Pattern (Structural)
+ * 3. State Pattern (Behavioral)
  */
 require('dotenv').config();
-const { PatientFactory } = require('../server/patterns/factory.js');
+const { PatientFactory, EmergencyPatient, OPDPatient, FollowUpPatient } = require('../server/patterns/factory.js');
 const DatabaseEngine = require('../server/db.js');
-const { WaitingState, ConsultationState, AdmittedState, DischargedState } = require('../server/patterns/state.js');
-const { NurseHandler, JuniorDoctorHandler, SpecialistHandler } = require('../server/patterns/chain.js');
+const { WaitingState, ConsultationState, AdmittedState, DischargedState, StateFactory } = require('../server/patterns/state.js');
 const AdmissionFacade = require('../server/patterns/facade.js');
 
 async function runTests() {
-    console.log("=== STARTING AUTOMATED DESIGN PATTERN TESTS ===");
+    console.log("===============================================================");
+    console.log("   AUTOMATED VERIFICATION: 3 JUSTIFIABLE DESIGN PATTERNS");
+    console.log("===============================================================");
 
-    // Initialize Database for testing
+    // Initialize Database Service for testing
     const db = DatabaseEngine.getInstance();
     await db.resetAll();
 
-    // 1. Singleton Test
-    console.log("\n[Singleton Pattern Test]");
-    const db1 = DatabaseEngine.getInstance();
-    const db2 = DatabaseEngine.getInstance();
-    if (db1 === db2) {
-        console.log("✅ Success: DatabaseEngine.getInstance() returns the exact same instance.");
-    } else {
-        console.error("❌ Failure: DatabaseEngine is not a Singleton.");
-        process.exit(1);
-    }
-
-    // 2. Factory Pattern Test
-    console.log("\n[Factory Pattern Test]");
-    const patient1 = PatientFactory.createPatient("P1", "Alice", 30, "OPD", 4, "Headache");
-    const patient2 = PatientFactory.createPatient("P2", "Bob", 45, "Emergency", 9, "Chest pain");
+    // =========================================================================
+    // 1. FACTORY METHOD PATTERN TEST (Creational)
+    // =========================================================================
+    console.log("\n[1. Factory Method Pattern Test (Creational)]");
     
-    if (patient1.getPatientType() === "OPD" && patient1.symptoms === "Headache") {
-        console.log("✅ Success: OPDPatient created with correct type and symptoms.");
-    } else {
-        console.error("❌ Failure: OPDPatient factory creation failed.");
-        process.exit(1);
-    }
-    
-    if (patient2.getPatientType() === "Emergency" && patient2.severityScore === 9) {
-        console.log("✅ Success: EmergencyPatient created with correct type and severity.");
-    } else {
-        console.error("❌ Failure: EmergencyPatient factory creation failed.");
-        process.exit(1);
-    }
+    // Create diverse clinical patient subclasses via the unified Factory
+    const opdPatient = PatientFactory.createPatient("P1", "Alice Smith", 28, "OPD", 3, "Persistent cough");
+    const emergencyPatient = PatientFactory.createPatient("P2", "Bob Vance", 54, "Emergency", 9, "Severe acute chest pressure");
+    const followUpPatient = PatientFactory.createPatient("P3", "Charlie Davis", 40, "Follow-up", 2, "Post-op suture check");
 
-    // 3. Singleton Queue Sorting Test
-    console.log("\n[Queue Sorting Test (Database Integration)]");
-    const activePatients = [patient1.serialize(), patient2.serialize()];
-    
-    // Sort logic matching server.js
-    const categoryPriority = { "Emergency": 1, "OPD": 2, "Follow-up": 3 };
-    const sorted = activePatients.sort((a, b) => {
-        const priorityA = categoryPriority[a.triageType] || 3;
-        const priorityB = categoryPriority[b.triageType] || 3;
-        if (priorityA !== priorityB) return priorityA - priorityB;
-        return b.severityScore - a.severityScore;
-    });
-
-    if (sorted[0].id === "P2" && sorted[1].id === "P1") {
-        console.log("✅ Success: Queue sorting correctly placed Emergency patient first.");
+    // Verify correct polymorphic subclass instantiation
+    if (opdPatient instanceof OPDPatient && opdPatient.getPriorityCategory() === 2) {
+        console.log("  ✅ OPDPatient instantiated with correct category priority (2).");
     } else {
-        console.error("❌ Failure: Queue sorting incorrect.", sorted);
+        console.error("  ❌ OPDPatient factory creation failed.");
         process.exit(1);
     }
 
-    // 4. State Pattern Transitions Test
-    console.log("\n[State Pattern Transitions Test]");
-    const waiting = new WaitingState();
-    console.log(`Initial State: ${waiting.getStateName()}`);
-    
-    const mockDoctor = { id: "D1", name: "Connor", specialty: "Emergency Trauma Specialist" };
-    
-    // Reconstitute bob
-    const bobInstance = PatientFactory.reconstitute(patient2.serialize());
-    
-    // waiting -> consultation (requires a valid doctor object)
-    const nextState = waiting.next(bobInstance, mockDoctor);
-    console.log(`Transition 1 (Consultation): ${nextState.getStateName()}`);
-    if (bobInstance.stateName === "Consultation" && bobInstance.assignedDoctor.name === "Connor") {
-        console.log("✅ Success: WaitingState -> ConsultationState transition correct.");
+    if (emergencyPatient instanceof EmergencyPatient && emergencyPatient.getPriorityCategory() === 1) {
+        console.log("  ✅ EmergencyPatient instantiated with top triage priority (1).");
     } else {
-        console.error("❌ Failure: Transition 1 failed.");
+        console.error("  ❌ EmergencyPatient factory creation failed.");
         process.exit(1);
     }
 
-    // 5. Chain of Responsibility Test
-    console.log("\n[Chain of Responsibility Test]");
-    const nurse = new NurseHandler();
-    const junior = new JuniorDoctorHandler();
-    const specialist = new SpecialistHandler();
-    nurse.setNext(junior).setNext(specialist);
-
-    // patient1 severity is 4 (should be handled by Junior Doctor)
-    const res1 = nurse.handleRequest(patient1, "Mild pain escalation");
-    console.log(`Severity 4 Escalation Result: "${res1}"`);
-    if (res1.includes("Junior Doctor")) {
-        console.log("✅ Success: Escalated past Nurse, resolved by Junior Doctor.");
+    if (followUpPatient instanceof FollowUpPatient && followUpPatient.getPriorityCategory() === 3) {
+        console.log("  ✅ FollowUpPatient instantiated with routine priority (3).");
     } else {
-        console.error("❌ Failure: Chain of Responsibility routing failed for severity 4.");
+        console.error("  ❌ FollowUpPatient factory creation failed.");
         process.exit(1);
     }
 
-    // patient2 severity is 9 (should be handled by Specialist)
-    const res2 = nurse.handleRequest(patient2, "Critical cardiac event");
-    console.log(`Severity 9 Escalation Result: "${res2}"`);
-    if (res2.includes("Specialist")) {
-        console.log("✅ Success: Escalated past Nurse & Junior Doctor, resolved by Specialist.");
+    // Verify factory enforces severity floor for emergency admissions
+    const lowSeverityEmergency = PatientFactory.createPatient("P4", "David", 60, "Emergency", 2, "Collapse");
+    if (lowSeverityEmergency.severityScore >= 7) {
+        console.log("  ✅ Factory rule enforced: Emergency patient severity score auto-floored to urgent (>= 7).");
     } else {
-        console.error("❌ Failure: Chain of Responsibility routing failed for severity 9.");
+        console.error("  ❌ Factory failed to enforce emergency severity floor.");
         process.exit(1);
     }
 
-    // 6. Facade Test
-    console.log("\n[Facade Pattern Test]");
+    // Verify reconstitution from persistent JSON record
+    const serializedData = emergencyPatient.serialize();
+    const reconstituted = PatientFactory.reconstitute(serializedData);
+    if (reconstituted && reconstituted.id === emergencyPatient.id && reconstituted.getPriorityCategory() === 1) {
+        console.log("  ✅ PatientFactory.reconstitute() restored domain entity with methods intact.");
+    } else {
+        console.error("  ❌ PatientFactory.reconstitute() failed.");
+        process.exit(1);
+    }
+
+    // =========================================================================
+    // 2. STATE PATTERN TEST (Behavioral)
+    // =========================================================================
+    console.log("\n[2. State Pattern Lifecycle Test (Behavioral)]");
+
+    const patient = PatientFactory.createPatient("P-STATE", "John Doe", 35, "OPD", 4, "Fever & chills");
+    let state = StateFactory.getState(patient.stateName);
+
+    // Initial state must be Waiting
+    if (state.getStateName() === "Waiting") {
+        console.log("  ✅ Initial State verified: Waiting.");
+    } else {
+        console.error("  ❌ Initial state is not Waiting.");
+        process.exit(1);
+    }
+
+    // Guard: transition without assigned doctor must be blocked
+    let guardPassed = false;
+    try {
+        state.next(patient, null);
+    } catch (err) {
+        guardPassed = true;
+        console.log("  ✅ Transition Guard enforced: Cannot enter Consultation without assigning a doctor.");
+    }
+    if (!guardPassed) {
+        console.error("  ❌ State guard failed: Allowed transition without doctor.");
+        process.exit(1);
+    }
+
+    // Valid transition: Waiting -> Consultation
+    const mockDoctor = { id: "D1", name: "Sarah Connor", specialty: "Emergency Trauma Specialist" };
+    state = state.next(patient, mockDoctor);
+    if (patient.stateName === "Consultation" && state.getStateName() === "Consultation") {
+        console.log("  ✅ Transition 1 verified: WaitingState -> ConsultationState.");
+    } else {
+        console.error("  ❌ WaitingState -> ConsultationState transition failed.");
+        process.exit(1);
+    }
+
+    // Clinical Escalation within State
+    const escalationRes = state.escalate(patient, "Vitals drop detected");
+    if (escalationRes && escalationRes.includes("Junior Doctor")) {
+        console.log(`  ✅ State Clinical Escalation handled correctly: "${escalationRes}".`);
+    } else {
+        console.error("  ❌ State clinical escalation failed.");
+        process.exit(1);
+    }
+
+    // Valid transition: Consultation -> Admitted
+    state = state.next(patient, "admit");
+    if (patient.stateName === "Admitted" && state.getStateName() === "Admitted") {
+        console.log("  ✅ Transition 2 verified: ConsultationState -> AdmittedState.");
+    } else {
+        console.error("  ❌ ConsultationState -> AdmittedState transition failed.");
+        process.exit(1);
+    }
+
+    // Valid transition: Admitted -> Discharged
+    state = state.next(patient, "discharge");
+    if (patient.stateName === "Discharged" && state.getStateName() === "Discharged") {
+        console.log("  ✅ Transition 3 verified: AdmittedState -> DischargedState.");
+    } else {
+        console.error("  ❌ AdmittedState -> DischargedState transition failed.");
+        process.exit(1);
+    }
+
+    // Terminal guard: cannot transition from Discharged
+    let terminalGuardPassed = false;
+    try {
+        state.next(patient, "admit");
+    } catch (err) {
+        terminalGuardPassed = true;
+        console.log("  ✅ Terminal Guard enforced: Cannot transition out of terminal DischargedState.");
+    }
+    if (!terminalGuardPassed) {
+        console.error("  ❌ Terminal state guard failed.");
+        process.exit(1);
+    }
+
+    // =========================================================================
+    // 3. FACADE PATTERN TEST (Structural)
+    // =========================================================================
+    console.log("\n[3. Facade Pattern Subsystem Orchestration Test (Structural)]");
+
     const facade = new AdmissionFacade();
+    const admittedPatient = PatientFactory.createPatient("P-FACADE", "Emma Stone", 42, "Emergency", 8, "Fractured femur");
+    admittedPatient.stateName = "Consultation"; // Set in consultation
+
+    // Step A: Facade coordinates admission across BedManager, DoctorScheduler, BillingSystem
+    const admissionResult = await facade.admitPatient(admittedPatient, "ICU", 4);
     
-    // Admit bob
-    const admission = await facade.admitPatient(bobInstance, "ICU", 3);
-    
-    // Retrieve bob from history in database
-    const dbHistory = await db.getHistory();
-    const dbBob = dbHistory.find(p => p.id === bobInstance.id);
-    
-    if (dbBob && dbBob.bedNumber && dbBob.stateName === "Admitted" && dbBob.billingSummary) {
-        console.log(`✅ Success: AdmissionFacade successfully allocated Bed: ${dbBob.bedNumber}, Doctor: ${dbBob.assignedDoctor.name}, Bill Total: $${dbBob.billingSummary.total}`);
+    // Verify all 3 subsystems were orchestrated correctly
+    const historyList = await db.getHistory();
+    const savedPatient = historyList.find(p => p.id === admittedPatient.id);
+
+    if (
+        savedPatient &&
+        savedPatient.bedNumber &&
+        savedPatient.assignedDoctor &&
+        savedPatient.billingSummary &&
+        savedPatient.stateName === "Admitted"
+    ) {
+        console.log(`  ✅ Facade admitPatient() coordinated all subsystems:`);
+        console.log(`     - BedManager Subsystem: Allocated Bed ${savedPatient.bedNumber} (ICU)`);
+        console.log(`     - DoctorScheduler Subsystem: Assigned Dr. ${savedPatient.assignedDoctor.name}`);
+        console.log(`     - BillingSystem Subsystem: Base $${savedPatient.billingSummary.baseFee} + Bed $${savedPatient.billingSummary.bedCharge} = Total $${savedPatient.billingSummary.total}`);
+        console.log(`     - State Subsystem: Transitioned to AdmittedState`);
     } else {
-        console.error("❌ Failure: AdmissionFacade execution failed.");
+        console.error("  ❌ AdmissionFacade.admitPatient() failed to coordinate all subsystems.");
         process.exit(1);
     }
 
-    // Discharge
-    const bobReconstituted = PatientFactory.reconstitute(dbBob);
-    await facade.dischargePatient(bobReconstituted);
-    
-    const dbBobDischarged = (await db.getHistory()).find(p => p.id === bobInstance.id);
-    if (dbBobDischarged && dbBobDischarged.stateName === "Discharged" && dbBobDischarged.billingSummary.status === "Paid") {
-        console.log("✅ Success: AdmissionFacade successfully discharged patient and marked bill as Paid.");
+    // Step B: Facade coordinates discharge, bed release, doctor freeing, and billing settlement
+    const initialBillTotal = savedPatient.billingSummary.total;
+    const reconstitutedAdmitted = PatientFactory.reconstitute(savedPatient);
+    const finalBill = await facade.dischargePatient(reconstitutedAdmitted, "govt");
+
+    const updatedHistory = await db.getHistory();
+    const dischargedPatient = updatedHistory.find(p => p.id === admittedPatient.id);
+
+    if (
+        dischargedPatient &&
+        dischargedPatient.stateName === "Discharged" &&
+        dischargedPatient.billingSummary.status === "Paid" &&
+        finalBill.total < initialBillTotal
+    ) {
+        console.log(`  ✅ Facade dischargePatient() coordinated checkout & release:`);
+        console.log(`     - BedManager Subsystem: Released bed allocation`);
+        console.log(`     - DoctorScheduler Subsystem: Freed supervising doctor`);
+        console.log(`     - BillingSystem Subsystem: Settled invoice ($${finalBill.total}) marked as Paid`);
+        console.log(`     - State Subsystem: Transitioned to terminal DischargedState`);
     } else {
-        console.error("❌ Failure: AdmissionFacade discharge failed.");
+        console.error("  ❌ AdmissionFacade.dischargePatient() failed checkout orchestration.");
         process.exit(1);
     }
 
-    // 7. Strategy Pattern Test
-    console.log("\n[Strategy Pattern Test]");
-    const { StrategyFactory } = require('../server/patterns/strategy.js');
-    
-    const baseFee = 100;
-    const bedCharge = 1000;
-    const pharmacyCharge = 500;
-    
-    // Standard Strategy
-    const standardStrategy = StrategyFactory.getStrategy("none");
-    const totalStandard = standardStrategy.calculateTotal(baseFee, bedCharge, pharmacyCharge);
-    if (totalStandard === 1600) {
-        console.log("✅ Success: StandardBillingStrategy calculates correct flat sum ($1600).");
-    } else {
-        console.error(`❌ Failure: StandardBillingStrategy total incorrect: ${totalStandard}`);
-        process.exit(1);
-    }
-    
-    // Government Shield Strategy (70% Bed Disc, 30% RX Disc)
-    // 100 + (1000 * 0.3) + (500 * 0.7) = 100 + 300 + 350 = 750
-    const govtStrategy = StrategyFactory.getStrategy("govt");
-    const totalGovt = govtStrategy.calculateTotal(baseFee, bedCharge, pharmacyCharge);
-    if (totalGovt === 750) {
-        console.log("✅ Success: GovernmentInsuredStrategy calculates correct discounted sum ($750).");
-    } else {
-        console.error(`❌ Failure: GovernmentInsuredStrategy total incorrect: ${totalGovt}`);
-        process.exit(1);
-    }
-    
-    // Premium Private Strategy (50% Consult Disc, 40% Bed Disc)
-    // (100 * 0.5) + (1000 * 0.6) + 500 = 50 + 600 + 500 = 1150
-    const premiumStrategy = StrategyFactory.getStrategy("premium");
-    const totalPremium = premiumStrategy.calculateTotal(baseFee, bedCharge, pharmacyCharge);
-    if (totalPremium === 1150) {
-        console.log("✅ Success: PremiumInsuredStrategy calculates correct discounted sum ($1150).");
-    } else {
-        console.error(`❌ Failure: PremiumInsuredStrategy total incorrect: ${totalPremium}`);
-        process.exit(1);
-    }
-
-    // Corporate Partner Strategy (Flat 15% Disc)
-    // 1600 * 0.85 = 1360
-    const corporateStrategy = StrategyFactory.getStrategy("corporate");
-    const totalCorporate = corporateStrategy.calculateTotal(baseFee, bedCharge, pharmacyCharge);
-    if (totalCorporate === 1360) {
-        console.log("✅ Success: CorporateBillingStrategy calculates correct flat total discount ($1360).");
-    } else {
-        console.error(`❌ Failure: CorporateBillingStrategy total incorrect: ${totalCorporate}`);
-        process.exit(1);
-    }
-
-    console.log("\n🎉 ALL DESIGN PATTERN TESTS PASSED SUCCESSFULLY! 🎉\n");
+    console.log("\n===============================================================");
+    console.log(" 🎉 ALL 3 JUSTIFIABLE DESIGN PATTERN TESTS PASSED SUCCESSFULLY!");
+    console.log("===============================================================\n");
 }
 
 const db = DatabaseEngine.getInstance();
@@ -207,6 +222,6 @@ db.connect(process.env.MONGODB_URI)
             });
     })
     .catch(err => {
-        console.error("Mongoose test setup failed:", err);
+        console.error("Database connection setup failed:", err);
         process.exit(1);
     });

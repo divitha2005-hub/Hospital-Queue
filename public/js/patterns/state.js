@@ -15,8 +15,8 @@ class PatientState {
         throw new Error("Method 'next(patient, option)' must be implemented.");
     }
 
-    escalate(patient, issue, chainInstance) {
-        throw new Error("Method 'escalate(patient, issue, chainInstance)' must be implemented.");
+    escalate(patient, issue) {
+        throw new Error("Method 'escalate(patient, issue)' must be implemented.");
     }
 
     getStateName() {
@@ -39,9 +39,14 @@ class WaitingState extends PatientState {
         patient.addLog(`Called for Consultation by Dr. ${doctor.name}.`);
     }
 
-    escalate(patient, issue, escalationChain) {
+    escalate(patient, issue) {
         patient.addLog(`Escalation triggered during Wait state. Issue: ${issue}`);
-        const result = escalationChain.handleRequest(patient, issue);
+        let result = "Specialist resolved: emergency intervention.";
+        if (patient.severityScore <= 3) {
+            result = "Nurse resolved: baseline monitoring. Case closed.";
+        } else if (patient.severityScore <= 7) {
+            result = "Junior Doctor resolved: prescribed medication. Case closed.";
+        }
         patient.addLog(`Escalation resolved: ${result}`);
         return result;
     }
@@ -66,9 +71,14 @@ class ConsultationState extends PatientState {
         }
     }
 
-    escalate(patient, issue, escalationChain) {
+    escalate(patient, issue) {
         patient.addLog(`Doctor requested escalation during consultation. Issue: ${issue}`);
-        const result = escalationChain.handleRequest(patient, issue);
+        let result = "Specialist resolved: scheduled emergency ICU admission.";
+        if (patient.severityScore <= 3) {
+            result = "Nurse resolved: baseline vitals monitoring.";
+        } else if (patient.severityScore <= 7) {
+            result = "Junior Doctor resolved: prescribed medications.";
+        }
         patient.addLog(`Escalation resolved: ${result}`);
         return result;
     }
@@ -85,9 +95,9 @@ class AdmittedState extends PatientState {
         patient.addLog(`Treatment completed. Patient discharged from ward.`);
     }
 
-    escalate(patient, issue, escalationChain) {
+    escalate(patient, issue) {
         patient.addLog(`Emergency ward escalation triggered. Issue: ${issue}`);
-        const result = escalationChain.handleRequest(patient, issue);
+        const result = "Attending Specialist notified: immediate ward visit scheduled.";
         patient.addLog(`Escalation resolved: ${result}`);
         return result;
     }
@@ -103,7 +113,7 @@ class DischargedState extends PatientState {
         throw new Error("Patient has already been discharged. No further lifecycle states available.");
     }
 
-    escalate(patient, issue, escalationChain) {
+    escalate(patient, issue) {
         throw new Error("Cannot escalate a discharged patient.");
     }
 }

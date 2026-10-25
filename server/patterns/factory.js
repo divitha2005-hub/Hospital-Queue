@@ -114,12 +114,12 @@ class PatientFactory {
                 patient = new Patient(data.id, data.name, data.age, data.triageType, data.severityScore, data.symptoms);
         }
         
-        // Restore properties
+        // Restore properties with defensive copies
         patient.stateName = data.stateName || "Waiting";
-        patient.assignedDoctor = data.assignedDoctor || null;
+        patient.assignedDoctor = data.assignedDoctor ? { ...data.assignedDoctor } : null;
         patient.bedNumber = data.bedNumber || null;
-        patient.billingSummary = data.billingSummary || null;
-        patient.logs = data.logs || [];
+        patient.billingSummary = data.billingSummary ? JSON.parse(JSON.stringify(data.billingSummary)) : null;
+        patient.logs = data.logs ? [...data.logs] : [];
         patient.createdAt = data.createdAt || new Date().toISOString();
         
         return patient;
@@ -139,28 +139,23 @@ class PatientFactory {
             };
         } else if (symStr.includes("breathing") || symStr.includes("anaphylaxis") || symStr.includes("asthma")) {
             return {
-                prescriptions: ["EpiPen 0.3mg IM Auto-Injector", "Methylprednisolone 40mg IV", "Albuterol Nebulizer 2.5mg"],
-                cost: 180
+                prescriptions: ["Epinephrine 0.3mg IM Auto-Injector", "Albuterol 2.5mg Inhalation", "Methylprednisolone 125mg IV"],
+                cost: 85
             };
-        } else if (symStr.includes("unconsciousness") || symStr.includes("head") || symStr.includes("trauma")) {
+        } else if (symStr.includes("fracture") || symStr.includes("trauma") || symStr.includes("femur")) {
             return {
-                prescriptions: ["Mannitol 20% IV Infusion", "Ondansetron 4mg IV", "Acetaminophen 500mg PO"],
-                cost: 95
-            };
-        } else if (symStr.includes("bleeding") || symStr.includes("fracture") || symStr.includes("sprain")) {
-            return {
-                prescriptions: ["Morphine 4mg IV (PRN)", "Tetanus Toxoid Booster IM", "Cefazolin 1g IV Prophylaxis"],
+                prescriptions: ["Morphine Sulfate 4mg IV", "Cefazolin 2g IV Prophylaxis", "Enoxaparin 40mg SQ (QD)"],
                 cost: 110
             };
-        } else if (symStr.includes("fever") || symStr.includes("vomiting") || symStr.includes("abdominal")) {
+        } else if (symStr.includes("fever") || symStr.includes("sepsis") || symStr.includes("infection")) {
             return {
-                prescriptions: ["Ondansetron 4mg PO", "Amoxicillin 500mg PO (TID)", "Acetaminophen 500mg PO"],
-                cost: 45
+                prescriptions: ["Vancomycin 1.5g IV Infusion", "Acetaminophen 1000mg IV", "Normal Saline 1000mL Bolus"],
+                cost: 65
             };
         } else {
             return {
-                prescriptions: ["Loratadine 10mg PO (QD)", "Ibuprofen 400mg PO (PRN)"],
-                cost: 15
+                prescriptions: ["Ibuprofen 400mg PO", "Oral Rehydration Salts 500mL"],
+                cost: 25
             };
         }
     }

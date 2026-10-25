@@ -6,7 +6,7 @@ const Doctor = require("./models/Doctor");
 const Bed = require("./models/Bed");
 
 /**
- * DatabaseEngine (Singleton Pattern)
+ * DatabaseEngine (Data Access Service)
  * Manages persistent storage using MongoDB (Mongoose ODM) or falls back to local database.json 
  * if MongoDB Atlas is blocked by IP Whitelisting / Offline.
  */

@@ -1,6 +1,7 @@
 /**
  * State Pattern (Behavioral)
- * Encapsulates state-specific validation and transition behaviors for the patient lifecycle.
+ * Encapsulates state-specific validation and transition behaviors for the patient lifecycle:
+ * Waiting -> Consultation -> Admitted -> Discharged
  */
 const { PatientFactory } = require("./factory");
 
@@ -11,7 +12,7 @@ class PatientState {
     next(patient, option) {
         throw new Error("next() transition is invalid for this state.");
     }
-    escalate(patient, issue, chain) {
+    escalate(patient, issue) {
         throw new Error("escalate() is invalid in this state.");
     }
 }
@@ -33,10 +34,15 @@ class WaitingState extends PatientState {
         return new ConsultationState();
     }
 
-    escalate(patient, issue, chain) {
-        const handlerResponse = chain.handleRequest(patient, issue);
+    escalate(patient, issue) {
         patient.logs.push(`[Escalation] Triage level escalated: ${issue}`);
-        return handlerResponse;
+        if (patient.severityScore <= 3) {
+            return "Nurse resolved: baseline monitoring. Case closed.";
+        } else if (patient.severityScore <= 7) {
+            return "Junior Doctor resolved: Prescribed medication and ordered standard tests. Case closed.";
+        } else {
+            return "Specialist resolved: Scheduled emergency surgical consultation and admitted to ICU/Ward. Case closed.";
+        }
     }
 }
 
@@ -71,10 +77,15 @@ class ConsultationState extends PatientState {
         }
     }
 
-    escalate(patient, issue, chain) {
-        const handlerResponse = chain.handleRequest(patient, issue);
+    escalate(patient, issue) {
         patient.logs.push(`[Escalation] Vitals warning escalated in consult: ${issue}`);
-        return handlerResponse;
+        if (patient.severityScore <= 3) {
+            return "Nurse resolved: baseline monitoring. Case closed.";
+        } else if (patient.severityScore <= 7) {
+            return "Junior Doctor resolved: Prescribed medication and ordered standard tests. Case closed.";
+        } else {
+            return "Specialist resolved: Scheduled emergency surgical consultation and admitted to ICU/Ward. Case closed.";
+        }
     }
 }
 
@@ -93,7 +104,7 @@ class AdmittedState extends PatientState {
         }
     }
 
-    escalate(patient, issue, chain) {
+    escalate(patient, issue) {
         throw new Error("State Escalation Error: Ward occupants cannot undergo triage queue escalation.");
     }
 }
@@ -107,7 +118,7 @@ class DischargedState extends PatientState {
         throw new Error("State Error: Cannot transition from terminal 'Discharged' state.");
     }
 
-    escalate(patient, issue, chain) {
+    escalate(patient, issue) {
         throw new Error("State Error: Cannot run clinical escalation on a discharged patient.");
     }
 }

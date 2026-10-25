@@ -1011,11 +1011,8 @@ code {
     font-size: 0.58rem;
 }
 .console-line .tag.factory { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
-.console-line .tag.singleton { background: rgba(59, 130, 246, 0.15); color: var(--blue); }
-.console-line .tag.observer { background: rgba(16, 185, 129, 0.15); color: var(--green); }
 .console-line .tag.state { background: rgba(251, 191, 36, 0.15); color: var(--gold); }
 .console-line .tag.facade { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
-.console-line .tag.chain { background: rgba(59, 130, 246, 0.15); color: var(--blue); }
 
 /* Vitals Heart Monitor Modal Layout */
 .modal-overlay {
@@ -1658,7 +1655,7 @@ code {
     border-radius: 6px;
 }
 
-/* Escalation Chain of Responsibility Alert Modal */
+/* Clinical Escalation Alert Modal */
 .escalation-alert-overlay {
     position: fixed;
     top: 0;
@@ -1693,7 +1690,7 @@ code {
 .escalation-alert-overlay.active .escalation-alert-card {
     transform: scale(1);
 }
-.routing-chain-visual {
+.routing-flow-visual {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1703,7 +1700,7 @@ code {
     border-radius: 8px;
     margin: 0.6rem 0;
 }
-.chain-node {
+.flow-node {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1711,26 +1708,26 @@ code {
     flex: 1;
     text-align: center;
 }
-.chain-node .node-icon {
+.flow-node .node-icon {
     font-size: 1.3rem;
     filter: grayscale(1);
     opacity: 0.5;
     transition: all 0.2s ease;
 }
-.chain-node.active .node-icon {
+.flow-node.active .node-icon {
     filter: none;
     opacity: 1;
     transform: scale(1.1);
 }
-.chain-node .node-lbl {
+.flow-node .node-lbl {
     font-size: 0.65rem;
     font-weight: 600;
     color: var(--text-muted);
 }
-.chain-node.active .node-lbl {
+.flow-node.active .node-lbl {
     color: var(--text-primary);
 }
-.chain-node .node-status {
+.flow-node .node-status {
     font-size: 0.52rem;
     padding: 0.08rem 0.3rem;
     border-radius: 4px;
@@ -1738,28 +1735,28 @@ code {
     font-weight: 700;
     border: 1px solid transparent;
 }
-.chain-node .node-status.bypassed {
+.flow-node .node-status.bypassed {
     background: rgba(239, 68, 68, 0.1);
     border-color: rgba(239, 68, 68, 0.25);
     color: #f87171;
 }
-.chain-node .node-status.resolved {
+.flow-node .node-status.resolved {
     background: rgba(16, 185, 129, 0.1);
     border-color: rgba(16, 185, 129, 0.25);
     color: #34d399;
     box-shadow: 0 0 8px rgba(16, 185, 129, 0.15);
 }
-.chain-node .node-status.idle {
+.flow-node .node-status.idle {
     background: rgba(255, 255, 255, 0.02);
     border-color: rgba(255, 255, 255, 0.05);
     color: var(--text-muted);
 }
-.chain-arrow {
+.flow-arrow {
     color: var(--text-muted);
     font-size: 0.8rem;
     opacity: 0.3;
 }
-.chain-arrow.active {
+.flow-arrow.active {
     color: var(--red);
     opacity: 1;
 }

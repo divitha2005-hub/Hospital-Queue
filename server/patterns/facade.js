@@ -97,6 +97,28 @@ class BillingSystem {
             status: "Unpaid"
         };
     }
+
+    settleInvoice(bill, insurancePlan = "none") {
+        let finalTotal = bill.total;
+        let description = "Standard Self-Pay Policy";
+
+        if (insurancePlan === "govt") {
+            const finalBed = bill.bedCharge * 0.3; // 70% discount
+            const finalPharm = bill.pharmacyCharge * 0.7; // 30% discount
+            finalTotal = Math.round(bill.baseFee + finalBed + finalPharm);
+            description = "Government Health Shield (70% Bed, 30% RX Discount)";
+        } else if (insurancePlan === "premium") {
+            const finalBase = bill.baseFee * 0.5; // 50% discount
+            const finalBed = bill.bedCharge * 0.6; // 40% discount
+            finalTotal = Math.round(finalBase + finalBed + bill.pharmacyCharge);
+            description = "Premium Private Insurance (50% Consult, 40% Bed Discount)";
+        } else if (insurancePlan === "corporate") {
+            finalTotal = Math.round((bill.baseFee + bill.bedCharge + bill.pharmacyCharge) * 0.85); // 15% flat discount
+            description = "Corporate Partner Discount (Flat 15% Total Discount)";
+        }
+
+        return { finalTotal, description };
+    }
 }
 
 /**
@@ -143,7 +165,7 @@ class AdmissionFacade {
         };
     }
 
-    async dischargePatient(patient, strategyName = "none") {
+    async dischargePatient(patient, insurancePlan = "none") {
         if (patient.stateName !== 'Admitted') {
             throw new Error("Facade Exception: Only currently admitted patients can undergo checkout.");
         }
@@ -154,12 +176,9 @@ class AdmissionFacade {
         // 2. Free doctor
         await this.doctorScheduler.freeDoctor(patient.assignedDoctor.id, this.db);
         
-        // 3. Settle bill and apply Strategy Pattern discount
-        const { StrategyFactory } = require("./strategy");
-        const strategy = StrategyFactory.getStrategy(strategyName);
-        
+        // 3. Settle bill through the BillingSystem subsystem
         const bill = patient.billingSummary;
-        const finalTotal = strategy.calculateTotal(bill.baseFee, bill.bedCharge, bill.pharmacyCharge);
+        const { finalTotal, description } = this.billingSystem.settleInvoice(bill, insurancePlan);
         patient.billingSummary.total = finalTotal;
         patient.billingSummary.status = "Paid";
         
@@ -167,7 +186,7 @@ class AdmissionFacade {
         const currentState = StateFactory.getState(patient.stateName);
         currentState.next(patient, 'discharge'); // Validates and transitions to DischargedState
         
-        patient.addLog(`Receipt paid ($${finalTotal}) using strategy: ${strategy.getPolicyDescription()}. Released room assignment.`);
+        patient.addLog(`Receipt paid ($${finalTotal}) using plan: ${description}. Released room assignment.`);
         
         // 5. Persist update
         await this.db.saveHistoryPatient(patient.serialize());

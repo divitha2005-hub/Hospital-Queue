@@ -6,13 +6,12 @@ const Bed = require("./models/Bed");
 const Doctor = require("./models/Doctor");
 const { PatientFactory } = require("./patterns/factory");
 const { StateFactory } = require("./patterns/state");
-const { NurseHandler, JuniorDoctorHandler, SpecialistHandler } = require("./patterns/chain");
 const AdmissionFacade = require("./patterns/facade");
 
 const db = DatabaseEngine.getInstance();
 const admissionFacade = new AdmissionFacade();
 
-// SSE Client list for network-based Observer Pattern
+// SSE Client list for real-time live synchronization
 let sseClients = [];
 
 /**
@@ -34,7 +33,7 @@ function sortQueue(patients) {
 }
 
 /**
- * Broadcast Event Helper (Observer Pattern over Server-Sent Events)
+ * Broadcast Event Helper (Server-Sent Events for real-time updates)
  */
 function broadcastEvent(eventType, payload) {
     sseClients.forEach(res => {
@@ -44,7 +43,7 @@ function broadcastEvent(eventType, payload) {
 }
 
 // -------------------------------------------------------------
-// 1. Server-Sent Events Endpoint (Observer Registration)
+// 1. Server-Sent Events Endpoint (Real-Time UI Synchronization)
 // -------------------------------------------------------------
 router.get("/events", (req, res) => {
     res.writeHead(200, {
@@ -53,7 +52,7 @@ router.get("/events", (req, res) => {
         "Connection": "keep-alive"
     });
     
-    res.write("data: { \"status\": \"observer_connected\" }\n\n");
+    res.write("data: { \"status\": \"connected\" }\n\n");
     sseClients.push(res);
     
     req.on("close", () => {
@@ -86,7 +85,7 @@ router.get("/patients", async (req, res) => {
     }
 });
 
-// Register and Triage Patient (Factory Method)
+// Register and Triage Patient (Factory Method Pattern)
 router.post("/patients", async (req, res) => {
     try {
         const { name, age, triageType, severityScore, symptoms } = req.body;
@@ -106,7 +105,7 @@ router.post("/patients", async (req, res) => {
 
         const activePatients = sortQueue(await db.getPatients());
 
-        // Broadcast updates to all connected browser Observers
+        // Broadcast updates to all connected browser displays
         broadcastEvent("queueUpdated", { queue: activePatients });
 
         res.status(201).json(patientData);
@@ -172,7 +171,7 @@ router.post("/consultations/call", async (req, res) => {
     }
 });
 
-// Clinical Case Escalation (Chain of Responsibility)
+// Clinical Case Escalation (State Pattern Workflow)
 router.post("/consultations/escalate", async (req, res) => {
     try {
         const { patientId, issue } = req.body;
@@ -187,15 +186,9 @@ router.post("/consultations/escalate", async (req, res) => {
 
         const patient = PatientFactory.reconstitute(patientDoc);
         
-        // Setup Escalation Chain
-        const nurse = new NurseHandler();
-        const juniorDoc = new JuniorDoctorHandler();
-        const specialist = new SpecialistHandler();
-        nurse.setNext(juniorDoc).setNext(specialist);
-
-        // State delegates to chain
+        // State pattern handles clinical escalation
         const currentState = StateFactory.getState(patient.stateName);
-        const resolution = currentState.escalate(patient, issue, nurse);
+        const resolution = currentState.escalate(patient, issue);
 
         // Adjust triage severity score dynamically if critical
         if (patient.severityScore < 9 && issue.toLowerCase().includes("critical")) {
@@ -253,10 +246,10 @@ router.post("/admissions/admit", async (req, res) => {
     }
 });
 
-// Process Payment & Discharge (Facade processes bill, releases bed, frees doctor)
+// Process Payment & Discharge (AdmissionFacade processes bill, releases bed, frees doctor)
 router.post("/admissions/discharge", async (req, res) => {
     try {
-        const { patientId, strategy } = req.body;
+        const { patientId, plan } = req.body;
         if (!patientId) {
             return res.status(400).json({ error: "Missing patientId parameter." });
         }
@@ -268,8 +261,9 @@ router.post("/admissions/discharge", async (req, res) => {
 
         const patient = PatientFactory.reconstitute(patientDoc);
         
-        // Invoke Facade with Strategy Pattern discount policy parameter
-        const billingSummary = await admissionFacade.dischargePatient(patient, strategy);
+        // Invoke Facade with insurance plan parameter
+        const selectedPlan = plan || "none";
+        const billingSummary = await admissionFacade.dischargePatient(patient, selectedPlan);
 
         broadcastEvent("queueUpdated", { discharged: patient.serialize() });
 
@@ -278,7 +272,7 @@ router.post("/admissions/discharge", async (req, res) => {
             patientName: patient.name,
             bedReleased: patientDoc.bedNumber || "ICU-101",
             totalAmount: billingSummary.total,
-            policyUsed: strategy || "none"
+            policyUsed: selectedPlan
         });
     } catch (err) {
         res.status(500).json({ error: err.message });

@@ -7,12 +7,7 @@ const routes = require("./server/routes");
 
 const app = express();
 const PORT = process.env.PORT || 8000;
-const MONGODB_URI = process.env.MONGODB_URI;
-
-if (!MONGODB_URI) {
-    console.error("❌ Error: MONGODB_URI is not defined in .env file.");
-    process.exit(1);
-}
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/hospital_queue";
 
 // Middleware
 app.use(cors());
@@ -29,7 +24,7 @@ app.get("*", (req, res) => {
     res.sendFile(path.join(__dirname, "public/index.html"));
 });
 
-// Connect to MongoDB first, then boot server listener
+// Connect to MongoDB first (falls back to local JSON mode if offline), then boot server
 const db = DatabaseEngine.getInstance();
 db.connect(MONGODB_URI)
     .then(() => {
@@ -38,7 +33,7 @@ db.connect(MONGODB_URI)
             console.log(`  🏥 BIOCARE EHR: FULL-STACK HOSPITAL QUEUE IS RUNNING!    `);
             console.log(`  🖥️  Server URL: http://localhost:${PORT}                  `);
             console.log(`  📁 Serving Frontend from: ./public                       `);
-            console.log(`  ⚡ Server-Sent Events (SSE) Observers active.             `);
+            console.log(`  ⚡ Real-time data streams active.                         `);
             console.log(`===========================================================`);
         });
     })
